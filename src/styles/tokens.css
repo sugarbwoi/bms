@@ -1,0 +1,204 @@
+/* ============================================================
+   KUDII — Design Tokens
+   Liquid Glass design system. Warm by default.
+   ============================================================ */
+
+:root {
+  /* ---- Shape ---- */
+  --r-xs: 9px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* ---- Glass ---- */
+  --blur: 22px;
+  --blur-strong: 30px;
+  --blur-soft: 14px;
+  --saturate: 160%;
+
+  /* ---- Spacing ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 56px;
+  --s-10: 72px;
+  --s-11: 96px;
+
+  /* ---- Typography ---- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-15: 15px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-30: 30px;
+  --fs-38: 38px;
+  --fs-48: 48px;
+  --fs-60: 60px;
+  --fs-76: 76px;
+
+  /* ---- Motion ---- */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 150ms;
+  --dur-2: 240ms;
+  --dur-3: 380ms;
+  --dur-4: 560ms;
+
+  /* ---- Semantic (shared, overridden per theme) ---- */
+  --success: #5f8b6a;
+  --danger: #b4564b;
+  --warning: #bd8a3f;
+  --info: #5b7a8c;
+  --success-soft: rgba(95, 139, 106, 0.14);
+  --danger-soft: rgba(180, 86, 75, 0.13);
+  --warning-soft: rgba(189, 138, 63, 0.15);
+  --info-soft: rgba(91, 122, 140, 0.13);
+}
+
+/* ============================================================
+   THEME — WARM GLASS (default)
+   ============================================================ */
+[data-theme='warm'] {
+  --bg: #f6f3ee;
+  --bg-2: #efe9e0;
+  --bg-elev: #ffffff;
+  --text: #171716;
+  --text-2: #6f6b64;
+  --text-3: #9a958c;
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass-soft: rgba(255, 255, 255, 0.44);
+  --glass-border: rgba(23, 23, 22, 0.08);
+  --border: rgba(23, 23, 22, 0.1);
+  --border-strong: rgba(23, 23, 22, 0.16);
+  --accent: #879681;
+  --accent-2: #c8b48a;
+  --on-accent: #ffffff;
+  --tint: rgba(135, 150, 129, 0.12);
+  --tint-2: rgba(200, 180, 138, 0.14);
+  --field: rgba(255, 255, 255, 0.7);
+  --field-border: rgba(23, 23, 22, 0.12);
+  --shadow-1: 0 1px 2px rgba(23, 23, 22, 0.04), 0 4px 14px rgba(23, 23, 22, 0.05);
+  --shadow-2: 0 2px 8px rgba(23, 23, 22, 0.05), 0 18px 44px rgba(23, 23, 22, 0.1);
+  --shadow-3: 0 30px 70px rgba(23, 23, 22, 0.16);
+  --aurora-1: rgba(200, 180, 138, 0.5);
+  --aurora-2: rgba(135, 150, 129, 0.42);
+  --aurora-3: rgba(214, 190, 170, 0.4);
+  --scroll: rgba(23, 23, 22, 0.18);
+}
+
+/* ============================================================
+   THEME — WHITE GLASS
+   ============================================================ */
+[data-theme='white'] {
+  --bg: #ffffff;
+  --bg-2: #f4f5f7;
+  --bg-elev: #ffffff;
+  --text: #17181a;
+  --text-2: #6b6f76;
+  --text-3: #9aa0a6;
+  --glass: rgba(255, 255, 255, 0.66);
+  --glass-strong: rgba(255, 255, 255, 0.84);
+  --glass-soft: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(17, 18, 20, 0.08);
+  --border: rgba(17, 18, 20, 0.1);
+  --border-strong: rgba(17, 18, 20, 0.16);
+  --accent: #6f7d6a;
+  --accent-2: #b9a97e;
+  --on-accent: #ffffff;
+  --tint: rgba(111, 125, 106, 0.1);
+  --tint-2: rgba(185, 169, 126, 0.12);
+  --field: rgba(255, 255, 255, 0.85);
+  --field-border: rgba(17, 18, 20, 0.12);
+  --shadow-1: 0 1px 2px rgba(17, 18, 20, 0.04), 0 4px 14px rgba(17, 18, 20, 0.06);
+  --shadow-2: 0 2px 8px rgba(17, 18, 20, 0.06), 0 18px 44px rgba(17, 18, 20, 0.1);
+  --shadow-3: 0 30px 70px rgba(17, 18, 20, 0.16);
+  --aurora-1: rgba(185, 169, 126, 0.34);
+  --aurora-2: rgba(150, 168, 200, 0.3);
+  --aurora-3: rgba(200, 200, 205, 0.34);
+  --scroll: rgba(17, 18, 20, 0.18);
+}
+
+/* ============================================================
+   THEME — BLACK GLASS
+   ============================================================ */
+[data-theme='black'] {
+  --bg: #0d0d0e;
+  --bg-2: #161617;
+  --bg-elev: #19191b;
+  --text: #f4f2ee;
+  --text-2: #a6a29b;
+  --text-3: #736f69;
+  --glass: rgba(32, 32, 35, 0.55);
+  --glass-strong: rgba(40, 40, 44, 0.74);
+  --glass-soft: rgba(28, 28, 31, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --accent: #9aa98f;
+  --accent-2: #c8b48a;
+  --on-accent: #14140f;
+  --tint: rgba(154, 169, 143, 0.16);
+  --tint-2: rgba(200, 180, 138, 0.16);
+  --field: rgba(255, 255, 255, 0.05);
+  --field-border: rgba(255, 255, 255, 0.14);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 30px 70px rgba(0, 0, 0, 0.6);
+  --aurora-1: rgba(154, 169, 143, 0.22);
+  --aurora-2: rgba(200, 180, 138, 0.18);
+  --aurora-3: rgba(90, 100, 120, 0.2);
+  --scroll: rgba(255, 255, 255, 0.2);
+  --success: #7fae8a;
+  --danger: #d97b6f;
+  --warning: #d6a95c;
+  --info: #86a7ba;
+}
+
+/* ============================================================
+   THEME — CHAMPAGNE GLASS
+   ============================================================ */
+[data-theme='champagne'] {
+  --bg: #f7f2e9;
+  --bg-2: #f0e8da;
+  --bg-elev: #ffffff;
+  --text: #22201c;
+  --text-2: #6e675c;
+  --text-3: #9c9488;
+  --glass: rgba(255, 255, 255, 0.66);
+  --glass-strong: rgba(255, 255, 255, 0.84);
+  --glass-soft: rgba(255, 255, 255, 0.48);
+  --glass-border: rgba(34, 32, 28, 0.09);
+  --border: rgba(34, 32, 28, 0.11);
+  --border-strong: rgba(34, 32, 28, 0.18);
+  --accent: #b79a63;
+  --accent-2: #c8b48a;
+  --on-accent: #ffffff;
+  --tint: rgba(183, 154, 99, 0.13);
+  --tint-2: rgba(200, 180, 138, 0.16);
+  --field: rgba(255, 255, 255, 0.78);
+  --field-border: rgba(34, 32, 28, 0.13);
+  --shadow-1: 0 1px 2px rgba(34, 32, 28, 0.04), 0 4px 14px rgba(34, 32, 28, 0.06);
+  --shadow-2: 0 2px 8px rgba(34, 32, 28, 0.06), 0 18px 44px rgba(34, 32, 28, 0.11);
+  --shadow-3: 0 30px 70px rgba(34, 32, 28, 0.17);
+  --aurora-1: rgba(200, 180, 138, 0.55);
+  --aurora-2: rgba(183, 154, 99, 0.3);
+  --aurora-3: rgba(224, 205, 175, 0.44);
+  --scroll: rgba(34, 32, 28, 0.18);
+}
