@@ -38,6 +38,7 @@ import type {
   ThemeName,
   RecordStatus,
 } from './types'
+import { migrateTheme } from './types'
 import { uid, nowISO, todayISODate, isEmail, isPhone, normalizePhone, toMinor, currencyDecimals } from './utils'
 import { PLANS, type PlanLimits } from './plans'
 import {
@@ -142,6 +143,9 @@ class Store {
       if (!raw) return
       const parsed = JSON.parse(raw) as DB
       this.db = { ...emptyDB(), ...parsed }
+      // Theme migration: collapse the old 4-theme system onto light/dark safely.
+      this.db.settings = (this.db.settings || []).map((s) => ({ ...s, theme: migrateTheme(s.theme as any) }))
+      this.db.businesses = (this.db.businesses || []).map((b) => ({ ...b, theme: migrateTheme(b.theme as any) }))
       // session expiry
       if (this.db.session.expiresAt && this.db.session.expiresAt < Date.now()) {
         this.db.session = { userId: null, activeBusinessId: null, expiresAt: null }
@@ -281,7 +285,7 @@ class Store {
     this.db.settings.push({
       id: uid('set'),
       user_id: user.id,
-      theme: 'warm',
+      theme: 'light',
       notifications_enabled: true,
       language: 'en',
       reduce_effects: false,
@@ -376,7 +380,7 @@ class Store {
       country: input.country || 'Nigeria',
       timezone: input.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos',
       logo_url: input.logo_url || null,
-      theme: input.theme || 'warm',
+      theme: input.theme || 'light',
       created_at: nowISO(),
       updated_at: nowISO(),
     }

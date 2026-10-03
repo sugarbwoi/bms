@@ -41,7 +41,10 @@ export function useSettings(userId?: string | null): UserSettings | null {
 /* ---------------- theme ---------------- */
 export function useApplyTheme(theme: ThemeName | undefined | null, reduceEffects?: boolean) {
   useEffect(() => {
-    if (theme) document.documentElement.setAttribute('data-theme', theme)
+    const t: ThemeName = theme === 'dark' ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', t)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff')
   }, [theme])
   useEffect(() => {
     document.body.classList.toggle('reduce-effects', !!reduceEffects)

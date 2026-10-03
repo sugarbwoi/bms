@@ -58,7 +58,7 @@ export default function App() {
   const biz = store.activeBusiness()
 
   const settings = user ? store.getSettings(user.id) : null
-  useApplyTheme(settings?.theme || biz?.theme || 'warm', settings?.reduce_effects)
+  useApplyTheme(settings?.theme || biz?.theme || 'light', settings?.reduce_effects)
 
   /* Guard: send signed-in users away from auth/marketing entry points,
      and send signed-out users to sign-in when they hit the app. */

@@ -25,12 +25,18 @@
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
   backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
   border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-highlight);
   transition: box-shadow var(--dur-3) var(--ease-out), background var(--dur-3);
 }
 .topnav.scrolled {
   box-shadow: var(--shadow-2);
   background: var(--glass-strong);
+}
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
 }
 .brand {
   display: flex;
@@ -41,6 +47,10 @@
   letter-spacing: -0.02em;
   color: var(--text);
   flex: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 .brand-mark {
   width: 30px;
@@ -49,13 +59,73 @@
   background: var(--text);
   display: grid;
   place-items: center;
-  color: var(--accent-2);
+  color: var(--bg);
   flex: none;
   box-shadow: var(--shadow-1);
 }
-[data-theme='black'] .brand-mark {
-  background: #f4f2ee;
-  color: #171716;
+
+/* ---------- K logo = Light/Dark switch ---------- */
+.theme-switch {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  border-radius: var(--r-pill);
+}
+.ts-track {
+  position: relative;
+  display: block;
+  width: 54px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--blur-soft)) saturate(var(--saturate));
+  backdrop-filter: blur(var(--blur-soft)) saturate(var(--saturate));
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-highlight);
+  transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2);
+}
+.ts-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transform: translateY(-50%);
+  opacity: 0.7;
+  transition: opacity var(--dur-2);
+}
+.theme-switch.dark .ts-track::after {
+  right: auto;
+  left: 9px;
+}
+.ts-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-3) var(--ease-spring), background var(--dur-2) var(--ease-out);
+}
+.theme-switch.dark .ts-thumb {
+  transform: translateX(24px);
+}
+.theme-switch:active .ts-thumb {
+  width: 27px;
+}
+.theme-switch.dark:active .ts-thumb {
+  transform: translateX(21px);
 }
 .nav-links {
   display: flex;
@@ -221,22 +291,16 @@
   display: grid;
   place-items: center;
   margin-bottom: var(--s-4);
+  background: var(--tint);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
 }
-.pulse-card .ic.in {
-  background: var(--success-soft);
-  color: var(--success);
-}
-.pulse-card .ic.out {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-.pulse-card .ic.due {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
+.pulse-card .ic.in,
+.pulse-card .ic.out,
+.pulse-card .ic.due,
 .pulse-card .ic.jobs {
-  background: var(--info-soft);
-  color: var(--info);
+  background: var(--tint);
+  color: var(--text);
 }
 .pulse-card .v {
   font-size: var(--fs-24);
@@ -530,7 +594,7 @@
 .check-item.done .box {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---------- Floating Action Button + menu ---------- */

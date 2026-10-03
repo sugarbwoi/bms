@@ -10,7 +10,16 @@ export type Minor = number // integer minor units
 export type Role = 'owner' | 'admin' | 'member'
 export type MembershipStatus = 'active' | 'invited' | 'disabled'
 export type RecordStatus = 'active' | 'archived'
-export type ThemeName = 'warm' | 'white' | 'black' | 'champagne'
+export type ThemeName = 'light' | 'dark'
+
+/* Legacy themes kept only for safe migration of already-saved data. */
+export type LegacyThemeName = 'warm' | 'white' | 'black' | 'champagne'
+
+/** Map any previously-saved theme onto the two supported themes. */
+export function migrateTheme(theme: string | undefined | null): ThemeName {
+  if (theme === 'dark' || theme === 'black') return 'dark'
+  return 'light'
+}
 
 export interface User {
   id: ID

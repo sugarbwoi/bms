@@ -13,10 +13,8 @@ import { CURRENCIES } from '../lib/utils'
 import type { ThemeName } from '../lib/types'
 
 const THEMES: { id: ThemeName; name: string; desc: string; swatch: string[] }[] = [
-  { id: 'warm', name: 'Warm Glass', desc: 'Soft cream and sage — the KUDII signature.', swatch: ['#F6F3EE', '#879681', '#C8B48A', '#171716'] },
-  { id: 'white', name: 'White Glass', desc: 'Bright, clean and airy.', swatch: ['#FFFFFF', '#EDEBE6', '#879681', '#171716'] },
-  { id: 'black', name: 'Black Glass', desc: 'Deep, focused and calm at night.', swatch: ['#141414', '#2A2A28', '#879681', '#F4F2EE'] },
-  { id: 'champagne', name: 'Champagne Glass', desc: 'Warm gold tones with quiet luxury.', swatch: ['#F7F1E6', '#C8B48A', '#A98C55', '#2A2418'] },
+  { id: 'light', name: 'Light', desc: 'White background, black text.', swatch: ['#FFFFFF', '#F2F2F3', '#0A0A0A', '#5F5F63'] },
+  { id: 'dark', name: 'Dark', desc: 'Black background, white text.', swatch: ['#000000', '#131315', '#F7F7F8', '#A3A3A8'] },
 ]
 
 export default function Onboarding() {
@@ -28,7 +26,7 @@ export default function Onboarding() {
   const [description, setDescription] = useState('')
   const [currency, setCurrency] = useState('NGN')
   const [country, setCountry] = useState('Nigeria')
-  const [theme, setTheme] = useState<ThemeName>('warm')
+  const [theme, setTheme] = useState<ThemeName>('light')
   const [err, setErr] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)

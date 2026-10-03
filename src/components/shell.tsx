@@ -27,7 +27,7 @@ import {
   MoreHorizontal,
   X,
 } from 'lucide-react'
-import { useDB, useScrolled, useToast, useIsMobile } from '../lib/hooks'
+import { useDB, useScrolled, useToast, useIsMobile, useUser, useSettings } from '../lib/hooks'
 import { useComposer } from './composer-context'
 import { store } from '../lib/store'
 import { navigate, useRoute } from '../lib/router'
@@ -72,6 +72,47 @@ export function BrandMark() {
   )
 }
 
+/* The K mark doubles as the Light/Dark switch.
+   The K sits left in Light and slides right in Dark. */
+export function ThemeSwitch() {
+  const user = useUser()
+  const settings = useSettings(user?.id)
+  const biz = store.activeBusiness()
+  const theme = settings?.theme || biz?.theme || 'light'
+  const isDark = theme === 'dark'
+
+  const toggle = () => {
+    if (!user) return
+    store.updateSettings(user.id, { theme: isDark ? 'light' : 'dark' })
+  }
+
+  return (
+    <button
+      type="button"
+      className={`theme-switch ${isDark ? 'dark' : 'light'}`}
+      role="switch"
+      aria-checked={isDark}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      onClick={toggle}
+    >
+      <span className="ts-track" aria-hidden>
+        <span className="ts-thumb">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M7 5v14M7 12l7-7M7 12l7 7"
+              stroke="currentColor"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </span>
+    </button>
+  )
+}
+
 /* ---------------- Top Navigation ---------------- */
 export function TopNav() {
   const db = useDB()
@@ -85,10 +126,12 @@ export function TopNav() {
 
   return (
     <nav className={`topnav ${scrolled ? 'scrolled' : ''}`} aria-label="Primary">
-      <button className="brand" onClick={() => navigate('/')} aria-label="KUDII home">
-        <BrandMark />
-        KUDII
-      </button>
+      <div className="brand-wrap">
+        <ThemeSwitch />
+        <button className="brand" onClick={() => navigate('/')} aria-label="KUDII home">
+          KUDII
+        </button>
+      </div>
 
       <div className="nav-links">
         {PRIMARY_NAV.map((n) => (

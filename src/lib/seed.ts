@@ -52,7 +52,7 @@ export async function buildDemoDB(): Promise<DB> {
   db.settings.push({
     id: uid('set'),
     user_id: USER,
-    theme: 'warm',
+    theme: 'light',
     notifications_enabled: true,
     language: 'en',
     reduce_effects: false,
@@ -67,7 +67,7 @@ export async function buildDemoDB(): Promise<DB> {
     country: 'Nigeria',
     timezone: 'Africa/Lagos',
     logo_url: null,
-    theme: 'warm',
+    theme: 'light',
     created_at: daysAgoISO(120),
     updated_at: now,
   })

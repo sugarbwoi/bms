@@ -1,64 +1,99 @@
-# KUDII — Build Plan
+# KUDII — Master Product Improvement Plan
 
-Know your money. Feel in control.
+Guiding principle: **SIMPLE TO USE. POWERFUL WHEN NEEDED.**
+Improve the EXISTING app. Do not rebuild. Do not fake features.
+Black & white Liquid Glass identity. Light/Dark only. Mobile first.
 
-## Phase 0 — Foundation  [DONE]
-- [x] Scaffold Vite + React + TypeScript + CSS-variable design system
-- [x] Design tokens + 4 themes (Warm, White, Black, Champagne)
-- [x] Data layer: typed entities, money in minor units, exact arithmetic
-- [x] Store with persistence + server-like service layer (tenant scoping, validation, activity, stock movements)
-- [x] UI primitives + composers/forms
-- [x] App entry (main.tsx) + root router (App.tsx)
-- [x] App shell: TopNav, BottomNav, FloatingActionMenu
+## Stage 1 — Light/Dark theme
+- [x] Replace ThemeName 'warm'|'white'|'black'|'champagne' with 'light'|'dark'
+- [x] Migrate old saved themes safely (warm/white/champagne -> light, black -> dark)
+- [x] Rewrite tokens.css theme blocks to black/white only
+- [x] Update index.html data-theme + theme-color
+- [x] Update onboarding + settings theme pickers to 2 options
+- [x] Default new users to light
 
-## Phase 1 — Core MVP (must fully work)
-- [x] Auth pages: Sign In, Sign Up, Password Reset
-- [x] Onboarding: create business, choose theme, first action, checklist
-- [x] Overview / Dashboard (Business Pulse + adaptive sections)
-- [x] Customers list + profile (connected history, statement)
-- [x] Products list + detail (stock, movements, low stock)
-- [x] Sales list + detail + receipt
-- [x] Jobs list + detail + statuses + derived payment status
-- [x] Money: income, expenses, drawings, outstanding
-- [x] Activity timeline
-- [x] Progress / Goals
-- [x] Invoices list + detail
-- [x] Settings: themes, business, subscription/usage, data
-- [x] Mobile experience + Liquid Glass floating action menu
-- [x] ReceiptView component
+## Stage 2 — K logo theme switch
+- [x] Make BrandMark a working Light/Dark switch in top-left
+- [x] K slides left in Light, right in Dark with smooth animation
+- [x] Accessible labels (aria), keyboard support
+- [x] Don't break other BrandMark uses (receipt, onboarding)
 
-## Phase 2 — Business Operations
-- [x] Customer statements (profile statement view)
-- [x] Advanced inventory movements view (product detail movements)
-- [x] Reports (in Progress)
-- [x] Notifications (settings toggle + activity)
-- [x] Activity history (full)
+## Stage 3 — Theme consistency, icons, arrows
+- [x] Replace colored accents with black/white system
+- [x] Theme-following select chevrons / arrows
+- [x] Consistent icon usage
 
-## Phase 3 — Commercial Platform
-- [x] Plans (Go / Plus), entitlements, limits, usage
-- [x] Upgrade/downgrade UI + usage display
-- [x] Payment provider abstraction scaffolding
-- [x] Multi-business UI
-- [x] Roles & permissions scaffolding
-- [x] i18n scaffolding (currency/timezone/date/number)
-- [x] AI Assistant — "Coming Soon" only
+## Stage 4 — FULL LIQUID GLASS (major)
+- [x] Strengthen glass surfaces (blur, borders, inner highlight, shadow)
+- [x] Aurora backdrop black/white only
+- [x] Layered depth, reflections, floating surfaces
+- [x] Apply across nav, cards, modals, drawers, bottom nav, FAB
 
-## Public Website
-- [x] Home (hero + interactive product preview)
-- [x] How It Works
-- [x] Pricing
-- [x] Security
-- [x] FAQ
-- [x] Sign In / Get Started
-- [x] SEO: titles, meta, OG, sitemap, robots, structured data
+## Stage 5 — Public website Liquid Glass redesign
+- [ ] Rebuild marketing pages with Liquid Glass B/W identity
+- [ ] Update copy to simple language
 
-## Quality
-- [x] Empty states, error states, loading skeletons
-- [x] Accessibility + reduced motion
-- [x] Build passes
-- [x] Local preview + public URL
+## Stage 6 — Mobile layout (very high)
+- [ ] No overflow, centering, safe areas
+- [ ] Liquid Glass bottom nav
+- [ ] Mobile forms 16px inputs (no iOS zoom)
+- [ ] Modals within viewport
+- [ ] Test 320–1920px
 
-## Deliver
-- [x] Build passes
-- [x] Local preview + public URL
-- [x] Attach deliverables
+## Stage 7 — Number formatting
+- [ ] 1,000 / 1,000,000 / 1,000.50 consistently
+- [ ] Never change stored values
+
+## Stage 8 — Discounts
+- [ ] Percentage (0-100) + fixed (<= subtotal)
+- [ ] Applied correctly in totals
+
+## Stage 9 — Transactions replace Jobs
+- [ ] Migrate Jobs -> Transactions safely
+- [ ] Remove Jobs nav, add Transactions
+- [ ] Keep calculations intact
+
+## Stage 10 — Payments & refunds
+- [ ] Payment states: Paid/Partially paid/Pending/Refunded/Cancelled
+- [ ] Payment references (KUDII-xxxxx)
+- [ ] Refunds create new entries
+
+## Stage 11 — Products & inventory
+- [ ] Remove SKU/barcode/scanning
+- [ ] name, selling price, stock only; cost/category/min-stock/image under More
+- [ ] Stock states + low stock alerts
+
+## Stage 12 — Customers & credit
+- [ ] Customer owes / credit clarity
+
+## Stage 13 — Purchases, suppliers, expenses
+- [ ] Suppliers + purchases
+- [ ] Expense categories
+
+## Stage 14 — Profit, cash flow, reports
+- [ ] Profit labelled as estimate
+- [ ] Money in/out/net
+- [ ] Reports under More
+
+## Stage 15 — Export & share
+- [ ] CSV/PDF/JSON/Excel export
+- [ ] Native OS share sheet (real)
+
+## Stage 16 — Business profile & backup
+- [ ] Business profile
+- [ ] Export/import backup
+
+## Stage 17 — Database / backend
+- [ ] Real persistence layer (not localStorage for production)
+
+## Stage 18 — Multi-device sync
+- [ ] Sync architecture
+
+## Stage 19 — Free/Premium entitlements
+- [ ] Backend-enforced, centralized
+
+## Stage 20 — Security & audit
+- [ ] Security + activity history
+
+## Stage 21 — Cross-device testing
+- [ ] Test breakpoints + devices
