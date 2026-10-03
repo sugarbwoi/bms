@@ -33,7 +33,7 @@ import {
 import { navigate, useRoute } from '../lib/router'
 import { useScrolled } from '../lib/hooks'
 import { BrandMark } from '../components/shell'
-import { PLANS } from '../lib/plans'
+import { PLANS, PLAN_ORDER } from '../lib/plans'
 import { formatMoney } from '../lib/utils'
 
 /* ---------------- Nav ---------------- */
@@ -143,7 +143,7 @@ function MkFooter() {
             </div>
             <p className="muted text-sm" style={{ maxWidth: '34ch', lineHeight: 1.6 }}>
               Know your money. Feel in control. A calmer way to run the day-to-day of your
-              business — customers, work, products and money in one place.
+              business — customers, products, sales and money in one place.
             </p>
           </div>
           <div className="footer-col">
@@ -321,7 +321,7 @@ function Home() {
               How it works
             </button>
           </div>
-          <p className="hero-note">Start with KUDII Go — ₦5,000 / month. No card required to explore.</p>
+          <p className="hero-note">Start free — ₦0, no card required. Upgrade to KUDII Go or Plus whenever you're ready.</p>
           <Preview />
         </div>
       </section>
@@ -441,7 +441,7 @@ function Home() {
         <div className="container">
           <div className="split rev">
             <div>
-              <span className="eyebrow">Products &amp; work</span>
+              <span className="eyebrow">Products &amp; sales</span>
               <h2 className="display mt-3">Sell products and track every sale</h2>
               <p className="muted">
                 Whether you sell fabric or run a service, KUDII adapts to your business. Stock moves
@@ -639,64 +639,48 @@ function HowItWorks() {
    PRICING
    ============================================================ */
 function Pricing() {
-  const go = PLANS.go
-  const plus = PLANS.plus
   return (
     <section className="section">
       <div className="container">
         <SectionHead eyebrow="Pricing" title="Simple pricing that grows with you">
-          Start with everything you need to run the day-to-day. Move up when you are ready to
-          remove every limit.
+          Start free, then move up when you are ready to remove every limit.
         </SectionHead>
 
         <div className="price-grid">
-          <div className="price-card">
-            <h3>{go.name}</h3>
-            <p className="muted text-sm mt-1">{go.tagline}</p>
-            <div className="price-tag">
-              <span className="amt num">{formatMoney(go.priceMinor!, 'NGN')}</span>
-              <span className="per">/ month</span>
-            </div>
-            <ul className="price-feats">
-              {go.features.map((f, i) => (
-                <li key={i}>
-                  <Check size={16} /> {f}
-                </li>
-              ))}
-            </ul>
-            <button className="btn btn-primary btn-block" onClick={() => navigate('/sign-up')}>
-              Start with Go
-            </button>
-          </div>
-
-          <div className="price-card featured">
-            <span className="ribbon">Most complete</span>
-            <h3>{plus.name}</h3>
-            <p className="muted text-sm mt-1">{plus.tagline}</p>
-            <div className="price-tag">
-              <span className="amt num">Unlimited</span>
-            </div>
-            <ul className="price-feats">
-              {plus.features.map((f, i) => (
-                <li key={i}>
-                  <Check size={16} /> {f}
-                </li>
-              ))}
-            </ul>
-            <button className="btn btn-accent btn-block" onClick={() => navigate('/sign-up')}>
-              Get started
-            </button>
-            <p className="text-xs muted mt-3" style={{ textAlign: 'center' }}>
-              KUDII Plus pricing is confirmed with you at upgrade.
-            </p>
-          </div>
+          {PLAN_ORDER.map((pid) => {
+            const p = PLANS[pid]
+            return (
+              <div key={pid} className={`price-card${p.highlight ? ' featured' : ''}`}>
+                {p.highlight && <span className="ribbon">Most complete</span>}
+                <h3>{p.name}</h3>
+                <p className="muted text-sm mt-1">{p.tagline}</p>
+                <div className="price-tag">
+                  <span className="amt num">{formatMoney(p.priceMinor, 'NGN')}</span>
+                  <span className="per">/ month</span>
+                </div>
+                <ul className="price-feats">
+                  {p.features.map((f, i) => (
+                    <li key={i}>
+                      <Check size={16} /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className={`btn ${p.highlight ? 'btn-accent' : 'btn-primary'} btn-block`}
+                  onClick={() => navigate('/sign-up')}
+                >
+                  {pid === 'free' ? 'Start free' : `Choose ${p.name.replace('KUDII ', '')}`}
+                </button>
+              </div>
+            )
+          })}
         </div>
 
         <div className="faq mt-8">
           {[
-            { q: 'Do I need a card to start?', a: 'No. You can create your account and explore KUDII Go straight away. Upgrades are confirmed when you are ready.' },
+            { q: 'Do I need a card to start?', a: 'No. KUDII Free is ₦0 and needs no card. You only pay when you choose KUDII Go or Plus, and paid features unlock after payment is confirmed.' },
             { q: 'What counts as a transaction?', a: 'Recorded money in, money out and net, plus payments you receive. Creating a sale or invoice does not count until money actually moves.' },
-            { q: 'Can I run more than one business?', a: 'KUDII Go includes one business workspace. KUDII Plus removes the limit so you can run several.' },
+            { q: 'Can I run more than one business?', a: 'KUDII Free is one business. KUDII Go allows up to 2, and KUDII Plus up to 5 — all under a single account, with each business kept fully separate.' },
             { q: 'What happens if I reach a limit?', a: 'KUDII tells you clearly and invites you to upgrade. Nothing you have recorded is ever lost.' },
           ].map((f, i) => (
             <FaqItem key={i} q={f.q} a={f.a} />

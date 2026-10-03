@@ -13,8 +13,8 @@ import { CURRENCIES } from '../lib/utils'
 import type { ThemeName } from '../lib/types'
 
 const THEMES: { id: ThemeName; name: string; desc: string; swatch: string[] }[] = [
-  { id: 'light', name: 'Light', desc: 'White background, black text.', swatch: ['#FFFFFF', '#F2F2F3', '#0A0A0A', '#5F5F63'] },
-  { id: 'dark', name: 'Dark', desc: 'Black background, white text.', swatch: ['#000000', '#131315', '#F7F7F8', '#A3A3A8'] },
+  { id: 'light', name: 'Light', desc: 'Soft warm off-white, easy on the eyes.', swatch: ['#FAF8F4', '#F1EDE6', '#211E1A', '#6B655C'] },
+  { id: 'dark', name: 'Dark', desc: 'Warm charcoal, comfortable for long sessions.', swatch: ['#17150F', '#211E17', '#F3EFE7', '#A8A296'] },
 ]
 
 export default function Onboarding() {
@@ -96,7 +96,7 @@ export default function Onboarding() {
                 {[
                   { icon: Building2, t: 'Name your business', d: 'Currency and country apply across KUDII.' },
                   { icon: Palette, t: 'Choose a theme', d: 'Make KUDII feel like yours.' },
-                  { icon: Sparkles, t: 'Record your first action', d: 'A customer, a sale, a job or income.' },
+                  { icon: Sparkles, t: 'Record your first action', d: 'A customer, a sale or an expense.' },
                 ].map((f, i) => (
                   <div className="row gap-3" key={i}>
                     <span

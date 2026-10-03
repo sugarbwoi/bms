@@ -13,8 +13,6 @@ import type {
   Business,
   Customer,
   Product,
-  Job,
-  JobStatus,
   Sale,
   SaleItem,
   Transaction,
@@ -37,50 +35,64 @@ import type {
   Result,
   ThemeName,
   RecordStatus,
+  AuthPurpose,
+  AuthChallenge,
+  EmailMessage,
 } from './types'
 import { migrateTheme } from './types'
-import { uid, nowISO, todayISODate, isEmail, isPhone, normalizePhone, toMinor, currencyDecimals } from './utils'
+import { uid, nowISO, todayISODate, isEmail, isPhone, normalizePhone } from './utils'
 import { PLANS, type PlanLimits } from './plans'
 import {
   saleBalance,
-  salePaid,
-  jobBalance,
-  jobPaid,
   invoiceBalance,
-  invoicePaid,
   scope,
   usage as usageOf,
   planOf,
 } from './derive'
+import {
+  deliverEmail,
+  buildLoginCodeEmail,
+  buildVerifyEmail,
+  buildRecoveryEmail,
+  buildSecurityNotice,
+} from './email'
 
 const STORAGE_KEY = 'kudii.db.v1'
 const SESSION_HOURS = 24 * 14 // 14 days
+const CODE_TTL_MS = 10 * 60 * 1000 // 10 minutes
+const MAX_CODE_ATTEMPTS = 5
 
-/* ---------------- password hashing (demo-grade, Web Crypto) ----------------
-   NOTE: Production must hash server-side with bcrypt/argon2. This keeps the
-   plaintext password out of storage in the browser demo. */
-async function hashPassword(password: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}::${password}::kudii`)
+/* ---------------- hashing (demo-grade, Web Crypto) ----------------
+   NOTE: Production must hash server-side with bcrypt/argon2. This keeps
+   plaintext secrets out of browser storage in this demo build. */
+async function hashText(value: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`${salt}::${value}::kudii`)
   if (typeof crypto !== 'undefined' && crypto.subtle) {
     const buf = await crypto.subtle.digest('SHA-256', data)
     return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
   }
-  // fallback (non-secure environments)
   let h = 5381
   for (let i = 0; i < data.length; i++) h = ((h << 5) + h + data[i]) >>> 0
   return h.toString(16)
 }
 
+function hashPassword(password: string, salt: string): Promise<string> {
+  return hashText(password, salt)
+}
+
+function genCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
+
 export function emptyDB(): DB {
   return {
-    version: 1,
+    version: 2,
     users: [],
     settings: [],
     businesses: [],
     memberships: [],
     customers: [],
     products: [],
-    jobs: [],
     sales: [],
     saleItems: [],
     transactions: [],
@@ -94,6 +106,8 @@ export function emptyDB(): DB {
     goals: [],
     subscriptions: [],
     onboarding: [],
+    emails: [],
+    challenges: [],
     counters: {},
     session: { userId: null, activeBusinessId: null, expiresAt: null },
   }
@@ -102,6 +116,8 @@ export function emptyDB(): DB {
 export interface CreateBusinessInput {
   name: string
   description?: string
+  category?: string
+  phone?: string
   country?: string
   currency?: string
   timezone?: string
@@ -141,11 +157,26 @@ class Store {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return
-      const parsed = JSON.parse(raw) as DB
+      const parsed = JSON.parse(raw) as Partial<DB>
       this.db = { ...emptyDB(), ...parsed }
-      // Theme migration: collapse the old 4-theme system onto light/dark safely.
+      // ensure newly-added collections exist on older saves
+      this.db.emails = this.db.emails || []
+      this.db.challenges = this.db.challenges || []
+      this.db.users = (this.db.users || []).map((u) => ({ email_verified: true, ...u }))
+      this.db.businesses = (this.db.businesses || []).map((b) => ({
+        category: '',
+        phone: '',
+        ...b,
+        theme: migrateTheme(b.theme as any),
+      }))
       this.db.settings = (this.db.settings || []).map((s) => ({ ...s, theme: migrateTheme(s.theme as any) }))
-      this.db.businesses = (this.db.businesses || []).map((b) => ({ ...b, theme: migrateTheme(b.theme as any) }))
+      // subscriptions: backfill new fields
+      this.db.subscriptions = (this.db.subscriptions || []).map((s) => ({
+        pending_plan: null,
+        last_payment_reference: null,
+        last_payment_at: null,
+        ...s,
+      }))
       // session expiry
       if (this.db.session.expiresAt && this.db.session.expiresAt < Date.now()) {
         this.db.session = { userId: null, activeBusinessId: null, expiresAt: null }
@@ -166,6 +197,9 @@ class Store {
   currentUser(): User | null {
     const id = this.db.session.userId
     if (!id) return null
+    // Session expiry: an expired session is treated as signed out so the
+    // user is asked to re-authenticate. Valid sessions never re-prompt.
+    if (this.db.session.expiresAt && this.db.session.expiresAt <= Date.now()) return null
     return this.db.users.find((u) => u.id === id) || null
   }
 
@@ -213,7 +247,6 @@ class Store {
       title: string
       description?: string
       customer_id?: ID | null
-      job_id?: ID | null
       transaction_id?: ID | null
       metadata?: Record<string, unknown>
     },
@@ -223,7 +256,6 @@ class Store {
       business_id: businessId,
       user_id: this.db.session.userId,
       customer_id: input.customer_id ?? null,
-      job_id: input.job_id ?? null,
       transaction_id: input.transaction_id ?? null,
       type: input.type,
       title: input.title,
@@ -245,12 +277,15 @@ class Store {
     const map: Record<keyof PlanLimits, number> = {
       products: use.products,
       customers: use.customers,
-      active_jobs: use.active_jobs,
       transactions_per_month: use.transactions_this_month,
       businesses: use.businesses,
     }
     if (map[key] >= limit) {
-      return `You've reached the ${PLANS[plan].name} limit for ${String(key).replace(/_/g, ' ')} (${limit}). Upgrade to KUDII Plus to keep going.`
+      if (key === 'businesses' && plan === 'free') {
+        return 'Multiple businesses are available on KUDII Go and Plus.'
+      }
+      const label = key === 'transactions_per_month' ? 'transactions this month' : String(key)
+      return `You've reached the ${PLANS[plan].name} limit for ${label} (${limit}). Upgrade to keep going.`
     }
     return null
   }
@@ -276,6 +311,7 @@ class Store {
       email,
       name,
       avatar_url: null,
+      email_verified: false,
       password_hash: await hashPassword(password, salt),
       password_salt: salt,
       created_at: nowISO(),
@@ -293,6 +329,8 @@ class Store {
       updated_at: nowISO(),
     })
     this.startSession(user.id)
+    // Send a verification email (dev transport records it; no real delivery).
+    await this.sendCode(user.email, 'verify_email')
     this.commit()
     return { ok: true, data: user }
   }
@@ -324,30 +362,134 @@ class Store {
     }
   }
 
-  async requestPasswordReset(email: string): Promise<Result<{ token: string }>> {
-    const e = (email || '').trim().toLowerCase()
-    const user = this.db.users.find((u) => u.email === e)
-    // Always return ok to avoid account enumeration; token only in demo
-    const token = user ? uid('rst') : ''
-    if (user) {
-      ;(user as any)._reset = token
-      this.commit()
-    }
-    return { ok: true, data: { token } }
+  /** Re-issue the session if it is still valid — never asks for email again. */
+  sessionValid(): boolean {
+    return !!this.db.session.userId && !!this.db.session.expiresAt && this.db.session.expiresAt > Date.now()
   }
 
-  async resetPassword(input: { email: string; token: string; password: string }): Promise<Result<true>> {
+  /* ---------------- email code auth ---------------- */
+  private async sendCode(email: string, purpose: AuthPurpose): Promise<string> {
+    const code = genCode()
+    const salt = uid('csalt')
+    const challenge: AuthChallenge = {
+      id: uid('chl'),
+      email,
+      purpose,
+      code_hash: syncHash(`${salt}::${code}::kudii`),
+      expires_at: Date.now() + CODE_TTL_MS,
+      attempts: 0,
+      consumed: false,
+      created_at: nowISO(),
+    }
+    // embed the salt so verification can re-derive the hash
+    ;(challenge as AuthChallenge & { _salt: string })._salt = salt
+    // invalidate previous challenges for the same email+purpose
+    this.db.challenges = this.db.challenges.filter((c) => !(c.email === email && c.purpose === purpose && !c.consumed))
+    this.db.challenges.push(challenge)
+
+    const built =
+      purpose === 'sign_in' ? buildLoginCodeEmail(code) : purpose === 'verify_email' ? buildVerifyEmail(code) : buildRecoveryEmail(code)
+    const record = await deliverEmail({ ...built, to: email })
+    this.db.emails.push(record)
+    return code
+  }
+
+  private verifyCode(email: string, purpose: AuthPurpose, code: string): Result<AuthChallenge> {
+    const challenge = [...this.db.challenges]
+      .reverse()
+      .find((c) => c.email === email && c.purpose === purpose && !c.consumed)
+    if (!challenge) return { ok: false, error: 'That code has expired. Please request a new one.' }
+    if (challenge.expires_at < Date.now()) return { ok: false, error: 'That code has expired. Please request a new one.' }
+    if (challenge.attempts >= MAX_CODE_ATTEMPTS) return { ok: false, error: 'Too many attempts. Please request a new code.' }
+    challenge.attempts++
+    const salt = (challenge as AuthChallenge & { _salt?: string })._salt || ''
+    // verify synchronously against the stored hash using a sync fallback digest
+    const expected = syncHash(`${salt}::${code}::kudii`)
+    if (expected !== challenge.code_hash) return { ok: false, error: 'That code is not correct.' }
+    challenge.consumed = true
+    return { ok: true, data: challenge }
+  }
+
+  /** Request a passwordless sign-in code. */
+  async requestLoginCode(email: string): Promise<Result<{ demoCode?: string }>> {
+    const e = (email || '').trim().toLowerCase()
+    if (!isEmail(e)) return { ok: false, error: 'Enter a valid email address.', fieldErrors: { email: 'Invalid.' } }
+    const user = this.db.users.find((u) => u.email === e)
+    if (!user) {
+      // Do not reveal whether the account exists.
+      return { ok: true, data: {} }
+    }
+    const code = await this.sendCode(e, 'sign_in')
+    this.commit()
+    return { ok: true, data: { demoCode: code } }
+  }
+
+  /** Complete passwordless sign-in with the emailed code. */
+  async signInWithCode(email: string, code: string): Promise<Result<User>> {
+    const e = (email || '').trim().toLowerCase()
+    const user = this.db.users.find((u) => u.email === e)
+    if (!user) return { ok: false, error: 'We could not verify that code.' }
+    const v = this.verifyCode(e, 'sign_in', (code || '').trim())
+    if (!v.ok) return { ok: false, error: v.error }
+    if (!user.email_verified) user.email_verified = true
+    this.startSession(user.id)
+    this.commit()
+    return { ok: true, data: user }
+  }
+
+  /** Re-send the email-verification code for the signed-in account. */
+  async resendVerification(email?: string): Promise<Result<{ demoCode?: string }>> {
+    const e = (email || this.currentUser()?.email || '').trim().toLowerCase()
+    if (!e) return { ok: false, error: 'No email to verify.' }
+    const code = await this.sendCode(e, 'verify_email')
+    this.commit()
+    return { ok: true, data: { demoCode: code } }
+  }
+
+  /** Confirm an email-verification code. */
+  async verifyEmail(email: string, code: string): Promise<Result<User>> {
+    const e = (email || '').trim().toLowerCase()
+    const user = this.db.users.find((u) => u.email === e)
+    if (!user) return { ok: false, error: 'We could not verify that code.' }
+    const v = this.verifyCode(e, 'verify_email', (code || '').trim())
+    if (!v.ok) return { ok: false, error: v.error }
+    user.email_verified = true
+    user.updated_at = nowISO()
+    const notice = await deliverEmail({ ...buildSecurityNotice('Your KUDII email was verified.'), to: e })
+    this.db.emails.push(notice)
+    this.commit()
+    return { ok: true, data: user }
+  }
+
+  async requestPasswordReset(email: string): Promise<Result<{ demoCode?: string }>> {
+    const e = (email || '').trim().toLowerCase()
+    if (!isEmail(e)) return { ok: false, error: 'Enter a valid email address.', fieldErrors: { email: 'Invalid.' } }
+    const user = this.db.users.find((u) => u.email === e)
+    if (!user) return { ok: true, data: {} } // no enumeration
+    const code = await this.sendCode(e, 'recover')
+    this.commit()
+    return { ok: true, data: { demoCode: code } }
+  }
+
+  async resetPassword(input: { email: string; code: string; password: string }): Promise<Result<true>> {
     const e = (input.email || '').trim().toLowerCase()
     const user = this.db.users.find((u) => u.email === e)
     if (!user) return { ok: false, error: 'We could not verify that reset request.' }
-    if (input.password.length < 8) return { ok: false, error: 'Use at least 8 characters.', fieldErrors: { password: 'Too short.' } }
+    if ((input.password || '').length < 8) return { ok: false, error: 'Use at least 8 characters.', fieldErrors: { password: 'Too short.' } }
+    const v = this.verifyCode(e, 'recover', (input.code || '').trim())
+    if (!v.ok) return { ok: false, error: v.error }
     const salt = uid('salt')
     user.password_salt = salt
     user.password_hash = await hashPassword(input.password, salt)
     user.updated_at = nowISO()
-    delete (user as any)._reset
+    const notice = await deliverEmail({ ...buildSecurityNotice('Your KUDII password was changed.'), to: e })
+    this.db.emails.push(notice)
     this.commit()
     return { ok: true, data: true }
+  }
+
+  listEmails(): EmailMessage[] {
+    return [...this.db.emails].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }
 
   getSettings(userId: ID) {
@@ -360,6 +502,20 @@ class Store {
     this.commit()
   }
 
+  updateProfile(userId: ID, patch: { name?: string; avatar_url?: string | null }): Result<User> {
+    const u = this.db.users.find((x) => x.id === userId)
+    if (!u) return { ok: false, error: 'Account not found.' }
+    if (patch.name != null) {
+      const name = patch.name.trim()
+      if (name.length < 2) return { ok: false, error: 'Please enter your name.', fieldErrors: { name: 'Required.' } }
+      u.name = name
+    }
+    if (patch.avatar_url !== undefined) u.avatar_url = patch.avatar_url
+    u.updated_at = nowISO()
+    this.commit()
+    return { ok: true, data: u }
+  }
+
   /* ============================================================
      BUSINESS + ONBOARDING
      ============================================================ */
@@ -368,14 +524,27 @@ class Store {
     if (!u) return { ok: false, error: 'You must be signed in.' }
     const name = (input.name || '').trim()
     if (name.length < 2) return { ok: false, error: 'Please name your business.', fieldErrors: { name: 'Required.' } }
+
     const existing = this.listBusinesses()
-    if (existing.length >= 1 && planOf(this.db, existing[0].id) === 'go') {
-      return { ok: false, error: 'KUDII Go includes 1 business workspace. Upgrade to KUDII Plus for more.' }
+    // Determine the plan from the first (existing) business; a brand-new user is Free.
+    const plan: PlanId = existing.length ? planOf(this.db, existing[0].id) : 'free'
+    const allowance = PLANS[plan].limits.businesses
+    if (allowance !== null && existing.length >= allowance) {
+      if (plan === 'free') {
+        return { ok: false, error: 'Multiple businesses are available on KUDII Go and Plus.' }
+      }
+      return {
+        ok: false,
+        error: `${PLANS[plan].name} includes ${allowance} business workspace${allowance > 1 ? 's' : ''}. Upgrade to KUDII Plus for more.`,
+      }
     }
+
     const b: Business = {
       id: uid('biz'),
       name,
       description: input.description?.trim() || '',
+      category: input.category?.trim() || '',
+      phone: input.phone ? normalizePhone(input.phone) : '',
       currency: input.currency || 'NGN',
       country: input.country || 'Nigeria',
       timezone: input.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos',
@@ -394,16 +563,20 @@ class Store {
       created_at: nowISO(),
       updated_at: nowISO(),
     })
+    // New businesses start on the Free plan — paid plans require a confirmed payment.
     this.db.subscriptions.push({
       id: uid('sub'),
       business_id: b.id,
       provider: 'manual',
       provider_customer_id: null,
       provider_subscription_id: null,
-      plan: 'go',
+      plan: 'free',
+      pending_plan: null,
       status: 'active',
       current_period_start: nowISO(),
       current_period_end: new Date(Date.now() + 30 * 864e5).toISOString(),
+      last_payment_reference: null,
+      last_payment_at: null,
       created_at: nowISO(),
       updated_at: nowISO(),
     })
@@ -411,7 +584,7 @@ class Store {
       business_id: b.id,
       theme_selected: false,
       first_customer: false,
-      first_sale_or_job: false,
+      first_sale: false,
       first_transaction: false,
       completed: false,
       dismissed: false,
@@ -451,7 +624,7 @@ class Store {
     const o = this.db.onboarding.find((x) => x.business_id === businessId)
     if (!o) return
     ;(o as any)[key] = true
-    const done = o.theme_selected && o.first_customer && o.first_sale_or_job && o.first_transaction
+    const done = o.theme_selected && o.first_customer && o.first_sale && o.first_transaction
     if (done) o.completed = true
   }
 
@@ -536,7 +709,6 @@ class Store {
       description: input.description?.trim() || '',
       selling_price: input.selling_price || 0,
       cost_price: input.cost_price || 0,
-      sku: input.sku?.trim() || '',
       stock_quantity: 0,
       low_stock_threshold: input.low_stock_threshold ?? 5,
       status: 'active',
@@ -649,75 +821,6 @@ class Store {
   }
 
   /* ============================================================
-     JOBS
-     ============================================================ */
-  createJob(input: Partial<Job>): Result<Job> {
-    const b = this.requireBusiness()
-    if (!b) return { ok: false, error: 'Not authorized.' }
-    const fieldErrors: Record<string, string> = {}
-    const title = (input.title || '').trim()
-    if (title.length < 2) fieldErrors.title = 'Give this job a title.'
-    if (input.amount == null || input.amount < 0) fieldErrors.amount = 'Enter an amount.'
-    if (Object.keys(fieldErrors).length) return { ok: false, error: 'Please check the details.', fieldErrors }
-    const limitErr = this.guardLimit(b.id, 'active_jobs')
-    if (limitErr) return { ok: false, error: limitErr }
-    if (input.customer_id && !this.db.customers.find((c) => c.id === input.customer_id && c.business_id === b.id)) {
-      return { ok: false, error: 'Customer not found.' }
-    }
-    const j: Job = {
-      id: uid('job'),
-      business_id: b.id,
-      customer_id: input.customer_id || null,
-      title,
-      description: input.description?.trim() || '',
-      amount: input.amount || 0,
-      status: (input.status as JobStatus) || 'pending',
-      due_date: input.due_date || null,
-      notes: input.notes?.trim() || '',
-      created_at: nowISO(),
-      updated_at: nowISO(),
-      completed_at: null,
-    }
-    this.db.jobs.push(j)
-    const cust = j.customer_id ? this.db.customers.find((c) => c.id === j.customer_id) : null
-    this.log(b.id, { type: 'job.created', title: 'Job created', description: `${j.title}${cust ? ' · ' + cust.name : ''}`, customer_id: j.customer_id, job_id: j.id })
-    this.markOnboarding(b.id, 'first_sale_or_job')
-    this.commit()
-    return { ok: true, data: j }
-  }
-
-  updateJob(id: ID, patch: Partial<Job>): Result<Job> {
-    const b = this.requireBusiness()
-    if (!b) return { ok: false, error: 'Not authorized.' }
-    const j = this.db.jobs.find((x) => x.id === id && x.business_id === b.id)
-    if (!j) return { ok: false, error: 'Job not found.' }
-    Object.assign(j, patch, { id: j.id, business_id: j.business_id, updated_at: nowISO() })
-    this.commit()
-    return { ok: true, data: j }
-  }
-
-  setJobStatus(id: ID, status: JobStatus) {
-    const b = this.requireBusiness()
-    if (!b) return
-    const j = this.db.jobs.find((x) => x.id === id && x.business_id === b.id)
-    if (!j) return
-    const wasCompleted = j.status === 'completed'
-    j.status = status
-    j.updated_at = nowISO()
-    if (status === 'completed' && !wasCompleted) {
-      j.completed_at = nowISO()
-      this.log(b.id, { type: 'job.completed', title: 'Job completed', description: j.title, job_id: j.id, customer_id: j.customer_id })
-    }
-    this.commit()
-  }
-
-  getJob(id: ID): Job | null {
-    const b = this.requireBusiness()
-    if (!b) return null
-    return this.db.jobs.find((x) => x.id === id && x.business_id === b.id) || null
-  }
-
-  /* ============================================================
      SALES
      ============================================================ */
   createSale(input: {
@@ -790,7 +893,7 @@ class Store {
       })
     }
 
-    this.markOnboarding(b.id, 'first_sale_or_job')
+    this.markOnboarding(b.id, 'first_sale')
     this.commit()
     return { ok: true, data: sale }
   }
@@ -826,10 +929,11 @@ class Store {
      ============================================================ */
   recordPayment(input: {
     customer_id?: ID | null
-    target?: { type: 'sale' | 'job' | 'invoice'; id: ID } | null
+    target?: { type: 'sale' | 'invoice'; id: ID } | null
     amount: Minor
     method: string
     payment_date?: string
+    reference?: string
     notes?: string
   }): Result<Payment> {
     const b = this.requireBusiness()
@@ -847,10 +951,11 @@ class Store {
     businessId: ID,
     input: {
       customer_id?: ID | null
-      target?: { type: 'sale' | 'job' | 'invoice'; id: ID } | null
+      target?: { type: 'sale' | 'invoice'; id: ID } | null
       amount: Minor
       method: string
       payment_date?: string
+      reference?: string
       notes?: string
     },
   ): Payment {
@@ -861,7 +966,7 @@ class Store {
       amount: input.amount,
       currency: this.db.businesses.find((x) => x.id === businessId)?.currency || 'NGN',
       method: input.method || 'cash',
-      reference: this.nextNumber(businessId, 'PAY'),
+      reference: input.reference?.trim() || this.nextNumber(businessId, 'PAY'),
       payment_date: input.payment_date || todayISODate(),
       notes: input.notes?.trim() || '',
       status: 'posted',
@@ -873,7 +978,6 @@ class Store {
     let allocated = 0
     let sale_id: ID | null = null
     let invoice_id: ID | null = null
-    let job_id: ID | null = null
 
     if (input.target) {
       const t = input.target
@@ -882,10 +986,6 @@ class Store {
         const s = this.db.sales.find((x) => x.id === t.id && x.business_id === businessId)
         if (s) balance = Math.max(0, saleBalance(this.db, s))
         sale_id = t.id
-      } else if (t.type === 'job') {
-        const j = this.db.jobs.find((x) => x.id === t.id && x.business_id === businessId)
-        if (j) balance = Math.max(0, jobBalance(this.db, j))
-        job_id = t.id
       } else {
         const inv = this.db.invoices.find((x) => x.id === t.id && x.business_id === businessId)
         if (inv) balance = Math.max(0, invoiceBalance(this.db, inv))
@@ -899,7 +999,6 @@ class Store {
           payment_id: payment.id,
           sale_id,
           invoice_id,
-          job_id,
           amount: allocated,
         }
         this.db.allocations.push(alloc)
@@ -913,7 +1012,6 @@ class Store {
       customer_id: payment.customer_id,
       sale_id,
       invoice_id,
-      job_id,
       payment_id: payment.id,
       receipt_number: this.nextNumber(businessId, 'RCPT'),
       amount: payment.amount,
@@ -982,7 +1080,6 @@ class Store {
         payment_id: p.id,
         sale_id: a.sale_id,
         invoice_id: a.invoice_id,
-        job_id: a.job_id,
         amount: -take,
       })
       remaining -= take
@@ -1112,7 +1209,7 @@ class Store {
      ============================================================ */
   createInvoice(input: {
     customer_id?: ID | null
-    items: { product_id?: ID | null; job_id?: ID | null; description: string; quantity: number; unit_price: Minor }[]
+    items: { product_id?: ID | null; description: string; quantity: number; unit_price: Minor }[]
     discount?: Minor
     issue_date?: string
     due_date?: string | null
@@ -1143,7 +1240,6 @@ class Store {
         invoice_id: inv.id,
         business_id: b.id,
         product_id: it.product_id || null,
-        job_id: it.job_id || null,
         description: it.description,
         quantity: it.quantity,
         unit_price: it.unit_price,
@@ -1232,11 +1328,15 @@ class Store {
   }
 
   /* ============================================================
-     SUBSCRIPTION
+     SUBSCRIPTION / BILLING
+     A plan only becomes active after a payment is confirmed.
+     Choosing a plan puts the subscription into a 'pending' state.
      ============================================================ */
   getSubscription(businessId: ID): Subscription | null {
     return this.db.subscriptions.find((s) => s.business_id === businessId) || null
   }
+
+  /** Step 1: the user chooses a plan. Nothing unlocks yet. */
   changePlan(businessId: ID, plan: PlanId): Result<Subscription> {
     const b = this.requireBusiness()
     if (!b || b.id !== businessId) return { ok: false, error: 'Not authorized.' }
@@ -1248,27 +1348,79 @@ class Store {
         provider: 'manual',
         provider_customer_id: null,
         provider_subscription_id: null,
-        plan,
+        plan: 'free',
+        pending_plan: null,
         status: 'active',
         current_period_start: nowISO(),
         current_period_end: new Date(Date.now() + 30 * 864e5).toISOString(),
+        last_payment_reference: null,
+        last_payment_at: null,
         created_at: nowISO(),
         updated_at: nowISO(),
       }
       this.db.subscriptions.push(sub)
-    } else {
-      sub.plan = plan
+    }
+    if (plan === 'free') {
+      // Downgrade is immediate and never deletes data.
+      sub.plan = 'free'
+      sub.pending_plan = null
       sub.status = 'active'
       sub.updated_at = nowISO()
+      this.log(businessId, { type: 'subscription.changed', title: 'Plan changed to KUDII Free', description: 'Your data is kept.' })
+      this.commit()
+      return { ok: true, data: sub }
     }
-    this.log(businessId, { type: 'subscription.changed', title: `Plan changed to ${PLANS[plan].name}`, description: '' })
+    // Paid plan → payment pending (features stay locked until confirmed).
+    sub.pending_plan = plan
+    sub.status = 'pending'
+    sub.updated_at = nowISO()
+    this.log(businessId, { type: 'subscription.pending', title: `Payment pending for ${PLANS[plan].name}`, description: 'Awaiting payment confirmation.' })
     this.commit()
     return { ok: true, data: sub }
   }
+
+  /**
+   * Step 2: payment confirmed. In production this is called by the payment
+   * provider's webhook — never by the client clicking a button.
+   */
+  confirmPlanPayment(businessId: ID, reference: string): Result<Subscription> {
+    const b = this.requireBusiness()
+    if (!b || b.id !== businessId) return { ok: false, error: 'Not authorized.' }
+    const sub = this.db.subscriptions.find((s) => s.business_id === businessId)
+    if (!sub) return { ok: false, error: 'Subscription not found.' }
+    const target = sub.pending_plan || sub.plan
+    sub.plan = target
+    sub.pending_plan = null
+    sub.status = 'active'
+    sub.current_period_start = nowISO()
+    sub.current_period_end = new Date(Date.now() + 30 * 864e5).toISOString()
+    sub.last_payment_reference = reference
+    sub.last_payment_at = nowISO()
+    sub.updated_at = nowISO()
+    this.log(businessId, { type: 'subscription.activated', title: `${PLANS[target].name} activated`, description: `Payment ${reference} confirmed.` })
+    this.commit()
+    return { ok: true, data: sub }
+  }
+
+  /** Payment failed — revert to the last confirmed plan; never delete data. */
+  failPlanPayment(businessId: ID, reason: string): Result<Subscription> {
+    const b = this.requireBusiness()
+    if (!b || b.id !== businessId) return { ok: false, error: 'Not authorized.' }
+    const sub = this.db.subscriptions.find((s) => s.business_id === businessId)
+    if (!sub) return { ok: false, error: 'Subscription not found.' }
+    sub.pending_plan = null
+    sub.status = sub.plan === 'free' ? 'active' : 'active'
+    sub.updated_at = nowISO()
+    this.log(businessId, { type: 'subscription.failed', title: 'Payment failed', description: reason })
+    this.commit()
+    return { ok: true, data: sub }
+  }
+
   setSubscriptionStatus(businessId: ID, status: SubscriptionStatus) {
     const sub = this.db.subscriptions.find((s) => s.business_id === businessId)
     if (!sub) return
     sub.status = status
+    if (status === 'cancelled' || status === 'expired') sub.pending_plan = null
     sub.updated_at = nowISO()
     this.commit()
   }
@@ -1288,6 +1440,18 @@ class Store {
 /* local helper to avoid circular import at module top-level */
 function saleSubtotalLocal(db: DB, saleId: ID): Minor {
   return db.saleItems.filter((i) => i.sale_id === saleId).reduce((a, b) => a + b.total, 0)
+}
+
+/* synchronous digest used to verify emailed codes without async plumbing */
+function syncHash(value: string): string {
+  const data = new TextEncoder().encode(value)
+  let h1 = 5381
+  let h2 = 52711
+  for (let i = 0; i < data.length; i++) {
+    h1 = ((h1 << 5) + h1 + data[i]) >>> 0
+    h2 = ((h2 << 5) + h2 + data[i] * 3) >>> 0
+  }
+  return (h1.toString(16) + h2.toString(16)).padStart(16, '0')
 }
 
 export const store = new Store()

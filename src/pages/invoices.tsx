@@ -47,6 +47,8 @@ import {
   invoiceEffectiveStatus,
 } from '../lib/derive'
 import { formatMoney, formatDate, isOverdue, timeAgo } from '../lib/utils'
+import { downloadCSV, downloadExcel, printTable, shareCSV } from '../lib/export'
+import { Download, FileSpreadsheet, Share2 } from 'lucide-react'
 import type { Invoice, InvoiceStatus, Receipt } from '../lib/types'
 
 export default function Invoices({ id }: { id?: string }) {
@@ -72,6 +74,7 @@ function InvoiceList() {
   const db = useDB()
   const biz = store.activeBusiness()
   const composer = useComposer()
+  const toast = useToast()
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<Tab>('all')
 
@@ -98,15 +101,82 @@ function InvoiceList() {
   const draftCount = all.filter((i) => i.status === 'draft').length
   const overdueCount = all.filter((i) => invoiceEffectiveStatus(db, i) === 'overdue').length
 
+  // ---- Export (CSV / Excel / PDF / Share) --------------------------------
+  const exportHeaders = ['Invoice', 'Customer', 'Status', 'Issued', 'Due', 'Total', 'Paid', 'Balance']
+  const exportRows = () =>
+    rows.map(({ inv, status }) => {
+      const cust = db.customers.find((c) => c.id === inv.customer_id)
+      return [
+        inv.invoice_number,
+        cust?.name || 'No customer',
+        status.replace(/_/g, ' '),
+        inv.issue_date ? formatDate(inv.issue_date) : '',
+        inv.due_date ? formatDate(inv.due_date) : '',
+        invoiceTotal(db, inv).toFixed(2),
+        invoicePaid(db, inv.id).toFixed(2),
+        invoiceBalance(db, inv).toFixed(2),
+      ]
+    })
+  const exportStamp = new Date().toISOString().slice(0, 10)
+  const doCSV = () => {
+    downloadCSV(`kudii-invoices-${exportStamp}.csv`, exportHeaders, exportRows())
+    toast.push('CSV downloaded')
+  }
+  const doExcel = () => {
+    downloadExcel(`kudii-invoices-${exportStamp}.xls`, 'Invoices', exportHeaders, exportRows())
+    toast.push('Excel file downloaded')
+  }
+  const doPDF = () => {
+    const ok = printTable(
+      { title: 'Invoices', subtitle: `${rows.length} invoice${rows.length === 1 ? '' : 's'}`, business: biz?.name, currency },
+      exportHeaders,
+      exportRows(),
+    )
+    if (!ok) toast.push('Allow pop-ups to export a PDF', 'error')
+  }
+  const doShare = async () => {
+    const res = await shareCSV(`kudii-invoices-${exportStamp}.csv`, 'KUDII Invoices', exportHeaders, exportRows())
+    if (res.ok && res.shared) toast.push('Shared')
+    else if (res.ok) toast.push('CSV downloaded')
+    else if (!res.cancelled) toast.push(res.error || 'Could not share', 'error')
+  }
+
   return (
     <div className="stack gap-6">
       <PageHead
         title="Invoices"
         sub="Bill customers and track exactly what's still owed."
         actions={
-          <Button variant="primary" icon={Plus} onClick={() => composer.open('invoice')}>
-            New invoice
-          </Button>
+          <>
+            <Menu
+              align="right"
+              trigger={({ toggle }) => (
+                <Button variant="soft" icon={Download} onClick={toggle}>
+                  Export
+                </Button>
+              )}
+            >
+              {(close) => (
+                <>
+                  <MenuItem icon={Download} onClick={() => { doCSV(); close() }}>
+                    Download CSV
+                  </MenuItem>
+                  <MenuItem icon={FileSpreadsheet} onClick={() => { doExcel(); close() }}>
+                    Download Excel
+                  </MenuItem>
+                  <MenuItem icon={FileText} onClick={() => { doPDF(); close() }}>
+                    Print / Save as PDF
+                  </MenuItem>
+                  <MenuItem icon={Share2} onClick={() => { doShare(); close() }}>
+                    Share
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+            <Button variant="primary" icon={Plus} onClick={() => composer.open('invoice')}>
+              New invoice
+            </Button>
+          </>
         }
       />
 
@@ -126,7 +196,7 @@ function InvoiceList() {
           <div className="l">Paid</div>
         </div>
         <div className="pulse-card">
-          <span className="ic jobs">
+          <span className="ic neutral">
             <Pencil size={18} strokeWidth={2.2} />
           </span>
           <div className="v num">{draftCount}</div>
@@ -330,7 +400,7 @@ function InvoiceDetail({ id }: { id: string }) {
         <div className="stack gap-5">
           <SectionCard title="Line items" padded={false}>
             <div className="table-wrap">
-              <table className="table">
+              <table className="tbl">
                 <thead>
                   <tr>
                     <th>Description</th>
@@ -342,14 +412,14 @@ function InvoiceDetail({ id }: { id: string }) {
                 <tbody>
                   {items.map((it) => (
                     <tr key={it.id}>
-                      <td>{it.description}</td>
-                      <td className="num" style={{ textAlign: 'right' }}>
+                      <td data-label="Description">{it.description}</td>
+                      <td className="num" data-label="Qty" style={{ textAlign: 'right' }}>
                         {it.quantity}
                       </td>
-                      <td className="num" style={{ textAlign: 'right' }}>
+                      <td className="num" data-label="Price" style={{ textAlign: 'right' }}>
                         {formatMoney(it.unit_price, currency)}
                       </td>
-                      <td className="num" style={{ textAlign: 'right' }}>
+                      <td className="num" data-label="Total" style={{ textAlign: 'right' }}>
                         {formatMoney(it.total, currency)}
                       </td>
                     </tr>

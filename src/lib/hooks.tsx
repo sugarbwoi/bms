@@ -49,7 +49,7 @@ export function useApplyTheme(theme: ThemeName | undefined | null, reduceEffects
       /* storage unavailable — the pre-paint script will fall back to the system theme */
     }
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff')
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#17150f' : '#faf8f4')
   }, [theme])
   useEffect(() => {
     document.body.classList.toggle('reduce-effects', !!reduceEffects)

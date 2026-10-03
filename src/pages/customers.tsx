@@ -1,7 +1,7 @@
 /* ============================================================
    KUDII — Customers
    A list of everyone you do business with, and a profile that
-   connects every sale, job, invoice and payment to that person
+   connects every sale, invoice and payment to that person
    so you can see — at a glance — what they owe and what they've paid.
    ============================================================ */
 import { useMemo, useState } from 'react'
@@ -18,7 +18,6 @@ import {
   ArchiveRestore,
   CircleDollarSign,
   ShoppingBag,
-  Briefcase,
   FileText,
   Plus,
   Receipt as ReceiptIcon,
@@ -50,8 +49,6 @@ import {
   saleBalance,
   saleTotal,
   salePaymentState,
-  jobBalance,
-  jobPaymentState,
   invoiceBalance,
   invoiceTotal,
   invoiceEffectiveStatus,
@@ -128,7 +125,7 @@ function CustomerList() {
             message={
               query
                 ? 'Try a different search term.'
-                : 'Add your first customer to start tracking sales, jobs and payments against them.'
+                : 'Add your first customer to start tracking sales and payments against them.'
             }
             action={
               !query && tab === 'active' ? (
@@ -215,7 +212,6 @@ function CustomerProfile({ id }: { id: string }) {
 
   const bal = customerBalance(db, customer.id)
   const sales = scope.sales(db, businessId).filter((s) => s.customer_id === customer.id)
-  const jobs = scope.jobs(db, businessId).filter((j) => j.customer_id === customer.id)
   const invoices = scope.invoices(db, businessId).filter((i) => i.customer_id === customer.id)
   const payments = scope.payments(db, businessId).filter((p) => p.customer_id === customer.id)
   const activities = scope
@@ -289,9 +285,6 @@ function CustomerProfile({ id }: { id: string }) {
                 <MenuItem icon={Pencil} onClick={() => { composer.open('customer', { id: customer.id }); close() }}>
                   Edit details
                 </MenuItem>
-                <MenuItem icon={Briefcase} onClick={() => { composer.open('job', { customer_id: customer.id }); close() }}>
-                  New job
-                </MenuItem>
                 <MenuItem icon={FileText} onClick={() => { composer.open('invoice', { customer_id: customer.id }); close() }}>
                   New invoice
                 </MenuItem>
@@ -322,18 +315,11 @@ function CustomerProfile({ id }: { id: string }) {
           <div className="l">Total paid</div>
         </div>
         <div className="pulse-card">
-          <span className="ic jobs">
+          <span className="ic neutral">
             <ShoppingBag size={18} strokeWidth={2.2} />
           </span>
           <div className="v num">{sales.length}</div>
           <div className="l">Sales</div>
-        </div>
-        <div className="pulse-card">
-          <span className="ic out">
-            <Briefcase size={18} strokeWidth={2.2} />
-          </span>
-          <div className="v num">{jobs.length}</div>
-          <div className="l">Jobs</div>
         </div>
       </div>
 
@@ -374,38 +360,6 @@ function CustomerProfile({ id }: { id: string }) {
                             {formatMoney(saleTotal(db, s), currency)}
                           </span>
                           <StatusBadge status={salePaymentState(db, s)} />
-                        </span>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard
-              title="Jobs"
-              action={
-                <button className="link" onClick={() => composer.open('job', { customer_id: customer.id })}>
-                  <Plus size={14} /> New
-                </button>
-              }
-            >
-              {jobs.length === 0 ? (
-                <p className="muted text-sm">No jobs recorded for this customer yet.</p>
-              ) : (
-                <div className="list">
-                  {jobs
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                    .map((j) => (
-                      <button key={j.id} className="list-row" onClick={() => navigate(`/jobs/${j.id}`)}>
-                        <span className="list-main">
-                          <span className="list-title">{j.title}</span>
-                          <span className="list-sub">
-                            {formatMoney(j.amount, currency)}
-                            {jobBalance(db, j) > 0 ? ` · ${formatMoney(jobBalance(db, j), currency)} unpaid` : ''}
-                          </span>
-                        </span>
-                        <span className="list-end">
-                          <StatusBadge status={j.status} />
                         </span>
                       </button>
                     ))}
@@ -498,7 +452,7 @@ function CustomerProfile({ id }: { id: string }) {
 
 /* ============================================================
    STATEMENT
-   A running account: charges (sales, jobs, invoices) and
+   A running account: charges (sales and invoices) and
    payments in date order, ending with the balance owed.
    ============================================================ */
 function Statement({ customer, currency }: { customer: Customer; currency: string }) {
@@ -510,9 +464,6 @@ function Statement({ customer, currency }: { customer: Customer; currency: strin
     const rows: { date: string; label: string; ref: string; charge: number; payment: number }[] = []
     for (const s of scope.sales(db, businessId).filter((x) => x.customer_id === customer.id && x.status !== 'cancelled')) {
       rows.push({ date: s.sale_date, label: 'Sale', ref: s.sale_number, charge: saleTotal(db, s), payment: 0 })
-    }
-    for (const j of scope.jobs(db, businessId).filter((x) => x.customer_id === customer.id && x.status !== 'cancelled')) {
-      rows.push({ date: j.created_at.slice(0, 10), label: 'Job', ref: j.title, charge: j.amount, payment: 0 })
     }
     for (const i of scope.invoices(db, businessId).filter((x) => x.customer_id === customer.id && x.status !== 'cancelled' && x.status !== 'draft')) {
       rows.push({ date: i.issue_date, label: 'Invoice', ref: i.invoice_number, charge: invoiceTotal(db, i), payment: 0 })
@@ -547,13 +498,13 @@ function Statement({ customer, currency }: { customer: Customer; currency: strin
               <tbody>
                 {entries.map((e, idx) => (
                   <tr key={idx}>
-                    <td className="muted">{formatDate(e.date)}</td>
-                    <td>
+                    <td className="muted" data-label="Date">{formatDate(e.date)}</td>
+                    <td data-label="Description">
                       <span style={{ fontWeight: 500 }}>{e.label}</span>
                       <span className="muted mono text-xs"> · {e.ref}</span>
                     </td>
-                    <td className="right num">{e.charge ? formatMoney(e.charge, currency) : '—'}</td>
-                    <td className="right num" style={{ color: e.payment ? 'var(--success)' : undefined }}>
+                    <td className="right num" data-label="Charges">{e.charge ? formatMoney(e.charge, currency) : '—'}</td>
+                    <td className="right num" data-label="Payments" style={{ color: e.payment ? 'var(--success)' : undefined }}>
                       {e.payment ? formatMoney(e.payment, currency) : '—'}
                     </td>
                   </tr>

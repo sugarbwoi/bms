@@ -7,7 +7,6 @@ import {
   CustomerForm,
   ProductForm,
   SaleComposer,
-  JobForm,
   TransactionForm,
   PaymentComposer,
   InvoiceComposer,
@@ -21,7 +20,6 @@ export type ComposerName =
   | 'customer'
   | 'product'
   | 'sale'
-  | 'job'
   | 'income'
   | 'expense'
   | 'drawing'
@@ -37,7 +35,6 @@ export interface ComposerParams {
   customer_id?: string
   product_id?: string
   sale_id?: string
-  job_id?: string
   invoice_id?: string
   onDone?: (result?: any) => void
 }
@@ -74,8 +71,6 @@ function Host({ name, params, onClose }: { name: ComposerName; params: ComposerP
       return <ProductForm params={params} onClose={onClose} onDone={done} />
     case 'sale':
       return <SaleComposer params={params} onClose={onClose} onDone={done} />
-    case 'job':
-      return <JobForm params={params} onClose={onClose} onDone={done} />
     case 'income':
       return <TransactionForm kind="income" params={params} onClose={onClose} onDone={done} />
     case 'expense':

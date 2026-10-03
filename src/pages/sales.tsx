@@ -98,7 +98,7 @@ function SaleList() {
 
       <div className="pulse-grid">
         <div className="pulse-card">
-          <span className="ic jobs">
+          <span className="ic neutral">
             <ShoppingBag size={18} strokeWidth={2.2} />
           </span>
           <div className="v num">{all.filter((s) => s.status !== 'cancelled').length}</div>
@@ -316,10 +316,10 @@ function SaleDetail({ id }: { id: string }) {
                 <tbody>
                   {items.map((it) => (
                     <tr key={it.id}>
-                      <td>{it.description}</td>
-                      <td className="right num">{it.quantity}</td>
-                      <td className="right num">{formatMoney(it.unit_price, currency)}</td>
-                      <td className="right num">{formatMoney(it.total, currency)}</td>
+                      <td data-label="Item">{it.description}</td>
+                      <td className="right num" data-label="Qty">{it.quantity}</td>
+                      <td className="right num" data-label="Price">{formatMoney(it.unit_price, currency)}</td>
+                      <td className="right num" data-label="Total">{formatMoney(it.total, currency)}</td>
                     </tr>
                   ))}
                 </tbody>

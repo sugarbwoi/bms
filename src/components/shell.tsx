@@ -7,7 +7,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   LayoutGrid,
   Users,
-  Briefcase,
   Wallet,
   Package,
   Activity as ActivityIcon,
@@ -48,7 +47,6 @@ export const PRIMARY_NAV = [
 export const SECONDARY_NAV = [
   { to: '/sales', label: 'Sales', icon: ShoppingBag },
   { to: '/invoices', label: 'Invoices', icon: FileText },
-  { to: '/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/activity', label: 'Activity', icon: ActivityIcon },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
 ]
@@ -125,7 +123,7 @@ export function TopNav() {
   const user = store.currentUser()
   const biz = store.activeBusiness()
   const businesses = store.listBusinesses()
-  const plan = biz ? planOf(db, biz.id) : 'go'
+  const plan = biz ? planOf(db, biz.id) : 'free'
   const [moreOpen, setMoreOpen] = useState(false)
 
   return (
@@ -195,46 +193,59 @@ export function TopNav() {
           <Button variant="primary" size="sm" icon={Plus} onClick={() => composer.open('sale')}>
             New sale
           </Button>
-          {businesses.length > 1 && (
-            <Menu
-              trigger={({ toggle }) => (
-                <button className="btn btn-soft btn-sm" onClick={toggle} title="Switch business">
-                  <Building2 size={16} />
-                  <span className="hide-mobile">{biz?.name}</span>
-                  <ChevronDown size={14} />
-                </button>
-              )}
-            >
-              {(close) => (
-                <>
-                  <div className="menu-label">Businesses</div>
-                  {businesses.map((b) => (
-                    <MenuItem
-                      key={b.id}
-                      icon={b.id === biz?.id ? Check : Building2}
-                      active={b.id === biz?.id}
-                      onClick={() => {
-                        store.switchBusiness(b.id)
-                        close()
-                      }}
-                    >
-                      {b.name}
-                    </MenuItem>
-                  ))}
-                  <div className="menu-sep" />
+          <Menu
+            align="right"
+            trigger={({ open, toggle }) => (
+              <button
+                className={`btn btn-soft btn-sm biz-switch ${open ? 'open' : ''}`}
+                onClick={toggle}
+                title="Switch business"
+                aria-label="Switch business"
+              >
+                <Building2 size={16} />
+                <span className="hide-mobile biz-switch-name">{biz?.name || 'Business'}</span>
+                <ChevronDown size={14} />
+              </button>
+            )}
+          >
+            {(close) => (
+              <>
+                <div className="menu-label">Businesses</div>
+                {businesses.map((b) => (
                   <MenuItem
-                    icon={Plus}
+                    key={b.id}
+                    icon={b.id === biz?.id ? Check : Building2}
+                    active={b.id === biz?.id}
                     onClick={() => {
-                      composer.open('business')
+                      store.switchBusiness(b.id)
                       close()
                     }}
                   >
-                    Business settings
+                    {b.name}
                   </MenuItem>
-                </>
-              )}
-            </Menu>
-          )}
+                ))}
+                <div className="menu-sep" />
+                <MenuItem
+                  icon={Plus}
+                  onClick={() => {
+                    composer.open('business')
+                    close()
+                  }}
+                >
+                  Add business
+                </MenuItem>
+                <MenuItem
+                  icon={SettingsIcon}
+                  onClick={() => {
+                    navigate('/settings?tab=business')
+                    close()
+                  }}
+                >
+                  Business settings
+                </MenuItem>
+              </>
+            )}
+          </Menu>
         </div>
         <button className="nav-more" onClick={() => setMoreOpen(true)} aria-label="More options">
           <MoreHorizontal size={20} strokeWidth={2} />
