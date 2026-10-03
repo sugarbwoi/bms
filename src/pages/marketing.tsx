@@ -19,9 +19,7 @@ import {
   EyeOff,
   ServerCog,
   Building2,
-  Sparkles,
   Receipt,
-  Bell,
   FileText,
   HeartHandshake,
   Clock,
@@ -29,7 +27,8 @@ import {
   XCircle,
   CircleDollarSign,
   Smartphone,
-  Globe,
+  Menu,
+  X,
 } from 'lucide-react'
 import { navigate, useRoute } from '../lib/router'
 import { useScrolled } from '../lib/hooks'
@@ -50,40 +49,84 @@ function MkNav() {
   const scrolled = useScrolled(10)
   const { path } = useRoute()
   const [open, setOpen] = useState(false)
+  const go = (to: string) => {
+    setOpen(false)
+    navigate(to)
+  }
   return (
-    <nav className={`mk-nav ${scrolled ? 'scrolled' : ''}`}>
-      <div className="container">
-        <div className="mk-nav-inner">
-          <button className="brand" onClick={() => navigate('/')} aria-label="KUDII home">
-            <BrandMark />
-            KUDII
+    <>
+      <nav className={`mk-nav ${scrolled ? 'scrolled' : ''}`}>
+        <div className="container">
+          <div className="mk-nav-inner">
+            <button className="brand" onClick={() => navigate('/')} aria-label="KUDII home">
+              <BrandMark />
+              KUDII
+            </button>
+            <div className="mk-nav-links">
+              {NAV.map((n) => (
+                <a
+                  key={n.to}
+                  href={'#' + n.to}
+                  className={path === n.to ? 'active' : ''}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigate(n.to)
+                  }}
+                >
+                  {n.label}
+                </a>
+              ))}
+            </div>
+            <div className="mk-nav-actions">
+              <button className="btn btn-ghost" onClick={() => navigate('/sign-in')}>
+                Sign in
+              </button>
+              <button className="btn btn-primary" onClick={() => navigate('/sign-up')}>
+                Get started
+              </button>
+              <button
+                className="mk-burger"
+                aria-label="Open menu"
+                aria-expanded={open}
+                onClick={() => setOpen(true)}
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {open && (
+        <div className="mk-drawer" role="dialog" aria-label="Menu">
+          <button className="mk-drawer-close" aria-label="Close menu" onClick={() => setOpen(false)}>
+            <X size={20} />
           </button>
-          <div className="mk-nav-links">
+          <nav>
             {NAV.map((n) => (
               <a
                 key={n.to}
                 href={'#' + n.to}
-                className={path === n.to ? 'active' : ''}
                 onClick={(e) => {
                   e.preventDefault()
-                  navigate(n.to)
+                  go(n.to)
                 }}
               >
                 {n.label}
               </a>
             ))}
-          </div>
-          <div className="row gap-2">
-            <button className="btn btn-ghost" onClick={() => navigate('/sign-in')}>
-              Sign in
+          </nav>
+          <div className="hero-cta">
+            <button className="btn btn-primary btn-lg" onClick={() => go('/sign-up')}>
+              Get started <ArrowRight size={18} />
             </button>
-            <button className="btn btn-primary" onClick={() => navigate('/sign-up')}>
-              Get started
+            <button className="btn btn-soft btn-lg" onClick={() => go('/sign-in')}>
+              Sign in
             </button>
           </div>
         </div>
-      </div>
-    </nav>
+      )}
+    </>
   )
 }
 
@@ -205,20 +248,20 @@ function Preview() {
           <div>
             <div className="preview-pulse">
               <div className="pv-card">
-                <div className="pv-l">Money in</div>
+                <div className="pv-l">Sales today</div>
+                <div className="pv-v num">₦128,500</div>
+              </div>
+              <div className="pv-card">
+                <div className="pv-l">Money received</div>
                 <div className="pv-v num">₦486,500</div>
               </div>
               <div className="pv-card">
-                <div className="pv-l">Money out</div>
-                <div className="pv-v num">₦192,000</div>
-              </div>
-              <div className="pv-card">
-                <div className="pv-l">Owed to you</div>
+                <div className="pv-l">Customer owes</div>
                 <div className="pv-v num">₦318,000</div>
               </div>
               <div className="pv-card">
-                <div className="pv-l">Active jobs</div>
-                <div className="pv-v num">7</div>
+                <div className="pv-l">Low stock</div>
+                <div className="pv-v num">3</div>
               </div>
             </div>
             <div className="pv-card mt-4">
@@ -240,7 +283,7 @@ function Preview() {
                 <span className="badge badge-warning">₦85,000 due</span>
               </div>
               <div className="row-between">
-                <span className="text-sm">Lace fabric · 3 low</span>
+                <span className="text-sm">Lace fabric · 3 left</span>
                 <span className="badge badge-danger">Restock</span>
               </div>
               <div className="row-between">
@@ -319,9 +362,9 @@ function Home() {
           </SectionHead>
           <div className="steps-row">
             {[
-              { n: 1, t: 'Know', d: 'Record sales, jobs, payments and expenses in seconds. KUDII keeps the record straight.' },
+              { n: 1, t: 'Know', d: 'Record sales, payments and expenses in seconds. KUDII keeps the record straight.' },
               { n: 2, t: 'Understand', d: 'See what came in, what went out, and what is still owed — computed from real events.' },
-              { n: 3, t: 'Act', d: 'Restock, follow up, record a payment, finish a job. Clear next steps, not noise.' },
+              { n: 3, t: 'Act', d: 'Restock, follow up, record a payment, finish a sale. Clear next steps, not noise.' },
               { n: 4, t: 'Stay in control', d: 'Your dashboard, activity and progress keep the whole business in view.' },
             ].map((s) => (
               <div className="step-card" key={s.n}>
@@ -342,9 +385,9 @@ function Home() {
               <span className="eyebrow">Money you can trust</span>
               <h2 className="display mt-3">A sale is not money received</h2>
               <p className="muted">
-                This is the heart of KUDII. Creating a job, a sale or an invoice never counts as
-                income on its own. Money is only recognised when you actually record a payment —
-                so your numbers always reflect reality.
+                This is the heart of KUDII. Creating a sale or an invoice never counts as income on
+                its own. Money is only recognised when you actually record a payment — so your
+                numbers always reflect reality.
               </p>
               <ul>
                 <li>
@@ -399,11 +442,11 @@ function Home() {
           <div className="split rev">
             <div>
               <span className="eyebrow">Products &amp; work</span>
-              <h2 className="display mt-3">Sell products and run jobs, together</h2>
+              <h2 className="display mt-3">Sell products and track every sale</h2>
               <p className="muted">
                 Whether you sell fabric or run a service, KUDII adapts to your business. Stock moves
-                are controlled and auditable. Jobs move through clear stages. Your dashboard shows
-                the sections that matter to you.
+                are controlled and auditable. Every sale moves through clear payment states. Your
+                dashboard shows the sections that matter to you.
               </p>
               <ul>
                 <li>
@@ -413,7 +456,7 @@ function Home() {
                   <Check size={17} /> Inventory updated automatically, with full movement history
                 </li>
                 <li>
-                  <Check size={17} /> Jobs with pending, in-progress and completed stages
+                  <Check size={17} /> Transactions with clear payment states
                 </li>
                 <li>
                   <Check size={17} /> Low-stock alerts before you run out
@@ -432,11 +475,11 @@ function Home() {
                 </div>
                 <div className="pv-card row-between">
                   <span className="text-sm">Bespoke wedding gown</span>
-                  <span className="badge badge-info">In progress</span>
+                  <span className="badge badge-info">Partially paid</span>
                 </div>
                 <div className="pv-card row-between">
                   <span className="text-sm">Agbada set</span>
-                  <span className="badge badge-success">Completed</span>
+                  <span className="badge badge-success">Paid</span>
                 </div>
               </div>
             </div>
@@ -450,11 +493,11 @@ function Home() {
           <SectionHead eyebrow="Everything in one calm place" title="Built for the way owners actually work" />
           <div className="feature-grid">
             {[
-              { icon: LayoutGrid, t: 'Business Pulse', d: 'A living overview: money in, money out, what is owed, and what needs attention.' },
+              { icon: LayoutGrid, t: 'Overview', d: 'A living overview: today’s sales, money received, what is owed, and what needs attention.' },
               { icon: Users, t: 'Customers', d: 'Every customer with their full history, balances and statements in one profile.' },
-              { icon: Briefcase, t: 'Jobs', d: 'Track work from start to finish and see exactly what has been paid.' },
+              { icon: Briefcase, t: 'Transactions', d: 'Record every sale and see exactly what has been paid.' },
               { icon: Package, t: 'Products & stock', d: 'Sell, restock and adjust — every movement recorded and auditable.' },
-              { icon: Wallet, t: 'Money', d: 'Income, expenses and drawings, kept separate and always exact.' },
+              { icon: Wallet, t: 'Money', d: 'Money in, money out and net — kept separate and always exact.' },
               { icon: Receipt, t: 'Receipts', d: 'A clean receipt from every real payment, ready to share.' },
               { icon: ActivityIcon, t: 'Activity', d: 'A quiet, automatic log of what happened across your business.' },
               { icon: TrendingUp, t: 'Progress', d: 'Goals and momentum calculated from your real numbers.' },
@@ -493,7 +536,7 @@ function HowItWorks() {
           {[
             { n: 1, t: 'Set up your business', d: 'Name it, choose your currency and pick a theme that feels like you.' },
             { n: 2, t: 'Add customers & products', d: 'Bring in the people you serve and the things you sell.' },
-            { n: 3, t: 'Record sales, jobs & payments', d: 'Capture the day-to-day as it happens — it takes seconds.' },
+            { n: 3, t: 'Record sales & payments', d: 'Capture the day-to-day as it happens — it takes seconds.' },
             { n: 4, t: 'Stay in control', d: 'Watch your pulse, activity and progress update automatically.' },
           ].map((s) => (
             <div className="step-card" key={s.n}>
@@ -510,7 +553,7 @@ function HowItWorks() {
               <span className="eyebrow">Know</span>
               <h2 className="display mt-3">Record once. Understand everywhere.</h2>
               <p className="muted">
-                Every sale, job, payment and expense is stored as a single event. Totals, balances
+                Every sale, payment and expense is stored as a single event. Totals, balances
                 and statuses are derived from those events — so nothing drifts out of sync and
                 nothing needs to be re-entered.
               </p>
@@ -611,7 +654,7 @@ function Pricing() {
             <h3>{go.name}</h3>
             <p className="muted text-sm mt-1">{go.tagline}</p>
             <div className="price-tag">
-              <span className="amt num">{formatMoney(go.priceMinor!, 'NGN', { compact: true })}</span>
+              <span className="amt num">{formatMoney(go.priceMinor!, 'NGN')}</span>
               <span className="per">/ month</span>
             </div>
             <ul className="price-feats">
@@ -652,7 +695,7 @@ function Pricing() {
         <div className="faq mt-8">
           {[
             { q: 'Do I need a card to start?', a: 'No. You can create your account and explore KUDII Go straight away. Upgrades are confirmed when you are ready.' },
-            { q: 'What counts as a transaction?', a: 'Recorded income, expenses and drawings, plus payments you receive. Creating a sale, job or invoice does not count until money actually moves.' },
+            { q: 'What counts as a transaction?', a: 'Recorded money in, money out and net, plus payments you receive. Creating a sale or invoice does not count until money actually moves.' },
             { q: 'Can I run more than one business?', a: 'KUDII Go includes one business workspace. KUDII Plus removes the limit so you can run several.' },
             { q: 'What happens if I reach a limit?', a: 'KUDII tells you clearly and invites you to upgrade. Nothing you have recorded is ever lost.' },
           ].map((f, i) => (
@@ -753,11 +796,11 @@ function FAQ() {
   const items = [
     { q: 'What is KUDII?', a: 'KUDII is a premium business management app for small businesses. It helps you record what happened, see what is owed, know what needs attention, and take the next step quickly — all in one calm place.' },
     { q: 'Is KUDII accounting software?', a: 'No. KUDII is not traditional accounting software and it is not a spreadsheet. It is a clear, warm way to understand and run your business day to day. It keeps your money exact and your history intact.' },
-    { q: 'Does creating a sale mean I have been paid?', a: 'Never. In KUDII, a sale, job or invoice only records the work or the bill. Money is recognised only when you record an actual payment. This is what keeps your numbers honest.' },
-    { q: 'Can I handle part payments?', a: 'Yes. KUDII supports unpaid, partially paid, fully paid and even overpaid. Balances are computed for every sale, job, invoice and customer.' },
+    { q: 'Does creating a sale mean I have been paid?', a: 'Never. In KUDII, a sale or invoice only records the sale or the bill. Money is recognised only when you record an actual payment. This is what keeps your numbers honest.' },
+    { q: 'Can I handle part payments?', a: 'Yes. KUDII supports unpaid, partially paid, fully paid and even overpaid. Balances are computed for every sale, invoice and customer.' },
     { q: 'What if I make a mistake?', a: 'You can refund a payment or reverse a transaction. KUDII never deletes financial history — it records a new, auditable entry so the story stays complete.' },
     { q: 'Does it work on my phone?', a: 'Yes. KUDII is mobile-first, with a floating action button so you can record a sale, a payment or an expense in seconds.' },
-    { q: 'What are the plans?', a: 'KUDII Go is ₦5,000 per month with generous limits (50 products, 50 customers, 25 active jobs, 100 transactions a month, 1 business). KUDII Plus removes every limit.' },
+    { q: 'What are the plans?', a: 'KUDII Go is ₦5,000 per month with generous limits (50 products, 50 customers, 25 transactions, 100 transactions a month, 1 business). KUDII Plus removes every limit.' },
     { q: 'Can I run more than one business?', a: 'KUDII Go includes one business workspace. KUDII Plus lets you run several under one account.' },
     { q: 'Is my data safe?', a: 'Your data is isolated per business, scoped server-side, and never sold. You can export your data and request deletion at any time.' },
     { q: 'Is there an AI assistant?', a: 'An AI Assistant is planned and shown as “Coming Soon”. It is not active yet — KUDII does not pretend otherwise.' },
@@ -790,7 +833,7 @@ function GetStarted() {
           {[
             { icon: Building2, t: '1 · Set up', d: 'Name your business, choose your currency and pick a theme.' },
             { icon: Users, t: '2 · Add people & things', d: 'Add a customer and a product or two to get going.' },
-            { icon: Receipt, t: '3 · Record & relax', d: 'Record a sale or job, take a payment, and watch your pulse update.' },
+            { icon: Receipt, t: '3 · Record & relax', d: 'Record a sale, take a payment, and watch your overview update.' },
           ].map((f, i) => (
             <div className="feature" key={i}>
               <div className="f-ic">

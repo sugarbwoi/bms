@@ -9,6 +9,7 @@ import { useRoute, navigate } from './lib/router'
 import { store } from './lib/store'
 import { AppShell } from './components/shell'
 import { Skeleton } from './components/ui'
+import type { ThemeName } from './lib/types'
 
 /* ---- code-split pages ---- */
 const Marketing = lazy(() => import('./pages/marketing'))
@@ -58,7 +59,11 @@ export default function App() {
   const biz = store.activeBusiness()
 
   const settings = user ? store.getSettings(user.id) : null
-  useApplyTheme(settings?.theme || biz?.theme || 'light', settings?.reduce_effects)
+  const systemTheme: ThemeName =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'
+  useApplyTheme(settings?.theme || biz?.theme || systemTheme, settings?.reduce_effects)
 
   /* Guard: send signed-in users away from auth/marketing entry points,
      and send signed-out users to sign-in when they hit the app. */
