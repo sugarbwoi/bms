@@ -59,7 +59,9 @@ Black & white Liquid Glass identity. Light/Dark only. Mobile first.
 - [x] Remove 'New job' from FAB (keep Job model + all calculations intact)
 - [x] Keep /jobs route working (no data loss)
 - [x] Verify: tsc clean, build, desktop + mobile 320-1920 overflow sweep, no regressions
-- [ ] Commit + push Stage 9 to feat/master-improvements
+- [x] Commit + push Stage 9 to feat/master-improvements
+- [x] Deploy updated build to GitHub (main updated + gh-pages site rebuilt, old deployment replaced)
+- [x] Fix theme flash (pre-paint theme script) + drop sandbox script from production build
 
 ## Stage 10 — Payments & refunds
 - [ ] Payment states: Paid/Partially paid/Pending/Refunded/Cancelled
