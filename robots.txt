@@ -1,0 +1,9 @@
+# KUDII — robots.txt
+User-agent: *
+Allow: /
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /reset
+
+# The signed-in application is not indexable; only the public site is.
+Sitemap: https://kudii.app/sitemap.xml
