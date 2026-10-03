@@ -1,9 +1,23 @@
 <!doctype html>
-<html lang="en" data-theme="warm">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
+    <!-- Apply the saved theme before first paint so there is no flash of unstyled colour. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('kudii.theme');
+          if (t !== 'dark' && t !== 'light') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff');
+        } catch (e) {}
+      })();
+    </script>
     <title>KUDII — Know your money. Feel in control.</title>
     <meta
       name="description"
@@ -114,8 +128,7 @@
         ]
       }
     </script>
-  <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
-</head>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

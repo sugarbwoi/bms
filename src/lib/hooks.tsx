@@ -43,6 +43,11 @@ export function useApplyTheme(theme: ThemeName | undefined | null, reduceEffects
   useEffect(() => {
     const t: ThemeName = theme === 'dark' ? 'dark' : 'light'
     document.documentElement.setAttribute('data-theme', t)
+    try {
+      localStorage.setItem('kudii.theme', t)
+    } catch {
+      /* storage unavailable — the pre-paint script will fall back to the system theme */
+    }
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff')
   }, [theme])
