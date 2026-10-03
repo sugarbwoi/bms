@@ -139,8 +139,11 @@ export default function Progress() {
               {m.monthlySeries.map((s, i) => {
                 const h = Math.round((s.value / maxSeries) * 150)
                 return (
-                  <div key={i} className="stack gap-2" style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                    <span className="text-xs muted num" style={{ fontSize: 10 }}>
+                  <div key={i} className="stack gap-2" style={{ flex: '1 1 0', minWidth: 0, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                    <span
+                      className="text-xs muted num"
+                      style={{ fontSize: 10, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
                       {s.value > 0 ? formatMoney(s.value, currency) : ''}
                     </span>
                     <div

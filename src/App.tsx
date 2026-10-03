@@ -20,6 +20,7 @@ const Customers = lazy(() => import('./pages/customers'))
 const Products = lazy(() => import('./pages/products'))
 const Sales = lazy(() => import('./pages/sales'))
 const Jobs = lazy(() => import('./pages/jobs'))
+const Transactions = lazy(() => import('./pages/transactions'))
 const Money = lazy(() => import('./pages/money'))
 const Invoices = lazy(() => import('./pages/invoices'))
 const Activity = lazy(() => import('./pages/activity'))
@@ -134,6 +135,8 @@ function AppRoutes() {
       return <Sales id={segments[1]} />
     case 'jobs':
       return <Jobs id={segments[1]} />
+    case 'transactions':
+      return <Transactions />
     case 'money':
       return <Money />
     case 'invoices':

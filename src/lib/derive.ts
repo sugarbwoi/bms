@@ -427,6 +427,128 @@ export function outstandingWork(db: DB, businessId: ID) {
     .slice(0, 6)
 }
 
+/* ---------------- Unified transactions feed ----------------
+   One derived list that answers "what happened in my business?".
+   It never stores anything new — every row points back to a
+   record that already exists (sale, payment, transaction, job). */
+export type TxnKind = 'sale' | 'payment' | 'refund' | 'expense' | 'income' | 'drawings' | 'job'
+
+export interface UnifiedTxn {
+  id: ID
+  kind: TxnKind
+  direction: 'in' | 'out'
+  label: string
+  reference: string
+  customer: string
+  amount: Minor
+  status: string
+  date: string
+  href?: string
+}
+
+export function unifiedTransactions(db: DB, businessId: ID, range?: Range): UnifiedTxn[] {
+  const out: UnifiedTxn[] = []
+  const inR = (iso: string) => (range ? inRange(iso, range) : true)
+  const custName = (id: ID | null) => (id ? db.customers.find((c) => c.id === id)?.name || '' : '')
+
+  // Sales — what you sold
+  for (const s of scope.sales(db, businessId)) {
+    if (!inR(s.sale_date)) continue
+    out.push({
+      id: s.id,
+      kind: 'sale',
+      direction: 'in',
+      label: 'Sale',
+      reference: s.sale_number,
+      customer: custName(s.customer_id) || 'Walk-in',
+      amount: saleTotal(db, s),
+      status: s.status === 'cancelled' ? 'cancelled' : salePaymentState(db, s),
+      date: s.sale_date,
+      href: `/sales/${s.id}`,
+    })
+  }
+
+  // Payments — money actually received
+  for (const p of scope.payments(db, businessId)) {
+    if (!inR(p.payment_date)) continue
+    const status =
+      p.status === 'reversed'
+        ? 'reversed'
+        : p.status === 'refunded'
+          ? 'refunded'
+          : p.status === 'partially_refunded'
+            ? 'partially_refunded'
+            : 'paid'
+    out.push({
+      id: p.id,
+      kind: 'payment',
+      direction: 'in',
+      label: 'Payment',
+      reference: p.reference,
+      customer: custName(p.customer_id) || 'Payment received',
+      amount: p.amount,
+      status,
+      date: p.payment_date,
+    })
+  }
+
+  // Transactions — income / expense / refund / drawings / reversal
+  for (const t of scope.transactions(db, businessId)) {
+    if (!inR(t.transaction_date)) continue
+    const kind: TxnKind =
+      t.type === 'income'
+        ? 'income'
+        : t.type === 'expense'
+          ? 'expense'
+          : t.type === 'refund'
+            ? 'refund'
+            : t.type === 'drawings'
+              ? 'drawings'
+              : 'expense'
+    const label =
+      t.type === 'income'
+        ? 'Income'
+        : t.type === 'expense'
+          ? 'Expense'
+          : t.type === 'refund'
+            ? 'Refund'
+            : t.type === 'drawings'
+              ? 'Drawing'
+              : 'Reversal'
+    out.push({
+      id: t.id,
+      kind,
+      direction: t.type === 'income' ? 'in' : 'out',
+      label,
+      reference: t.category || label,
+      customer: custName(t.customer_id),
+      amount: t.amount,
+      status: t.status === 'reversed' ? 'reversed' : 'posted',
+      date: t.transaction_date,
+    })
+  }
+
+  // Legacy jobs — kept visible so nothing is hidden or lost
+  for (const j of scope.jobs(db, businessId)) {
+    if (!inR(j.created_at)) continue
+    out.push({
+      id: j.id,
+      kind: 'job',
+      direction: 'in',
+      label: 'Job',
+      reference: j.title,
+      customer: custName(j.customer_id) || 'No customer',
+      amount: j.amount,
+      status: j.status,
+      date: j.created_at,
+      href: `/jobs/${j.id}`,
+    })
+  }
+
+  out.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return out
+}
+
 export function planOf(db: DB, businessId: ID): PlanId {
   const sub = db.subscriptions.find((s) => s.business_id === businessId)
   if (!sub) return 'go'

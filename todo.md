@@ -52,9 +52,14 @@ Black & white Liquid Glass identity. Light/Dark only. Mobile first.
 - [x] Composer form grids responsive (stack on mobile, no overflow)
 
 ## Stage 9 — Transactions replace Jobs
-- [ ] Migrate Jobs -> Transactions safely
-- [ ] Remove Jobs nav, add Transactions
-- [ ] Keep calculations intact
+- [x] Create src/pages/transactions.tsx: unified feed (Sales, Payments, Refunds, Expenses, Income, Drawings, legacy Jobs)
+- [x] Search + date filter + type filter; rows show Reference/Customer/Amount/Status/Type
+- [x] Add 'transactions' route in App.tsx
+- [x] Primary nav -> Overview, Products, Customers, Transactions, Money; Sales/Invoices/Jobs/Activity/Progress under More
+- [x] Remove 'New job' from FAB (keep Job model + all calculations intact)
+- [x] Keep /jobs route working (no data loss)
+- [x] Verify: tsc clean, build, desktop + mobile 320-1920 overflow sweep, no regressions
+- [ ] Commit + push Stage 9 to feat/master-improvements
 
 ## Stage 10 — Payments & refunds
 - [ ] Payment states: Paid/Partially paid/Pending/Refunded/Cancelled

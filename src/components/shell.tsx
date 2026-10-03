@@ -12,6 +12,7 @@ import {
   Package,
   Activity as ActivityIcon,
   TrendingUp,
+  ArrowLeftRight,
   Plus,
   ChevronDown,
   LogOut,
@@ -38,14 +39,16 @@ import type { ComposerName } from './composer-context'
 
 export const PRIMARY_NAV = [
   { to: '/', label: 'Overview', icon: LayoutGrid },
+  { to: '/products', label: 'Products', icon: Package },
   { to: '/customers', label: 'Customers', icon: Users },
-  { to: '/jobs', label: 'Jobs', icon: Briefcase },
+  { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/money', label: 'Money', icon: Wallet },
 ]
 
 export const SECONDARY_NAV = [
-  { to: '/products', label: 'Products', icon: Package },
+  { to: '/sales', label: 'Sales', icon: ShoppingBag },
   { to: '/invoices', label: 'Invoices', icon: FileText },
+  { to: '/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/activity', label: 'Activity', icon: ActivityIcon },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
 ]
@@ -123,8 +126,10 @@ export function TopNav() {
   const biz = store.activeBusiness()
   const businesses = store.listBusinesses()
   const plan = biz ? planOf(db, biz.id) : 'go'
+  const [moreOpen, setMoreOpen] = useState(false)
 
   return (
+    <>
     <nav className={`topnav ${scrolled ? 'scrolled' : ''}`} aria-label="Primary">
       <div className="brand-wrap">
         <ThemeSwitch />
@@ -231,6 +236,9 @@ export function TopNav() {
             </Menu>
           )}
         </div>
+        <button className="nav-more" onClick={() => setMoreOpen(true)} aria-label="More options">
+          <MoreHorizontal size={20} strokeWidth={2} />
+        </button>
         <Menu
           trigger={({ toggle }) => (
             <button
@@ -289,103 +297,97 @@ export function TopNav() {
         </Menu>
       </div>
     </nav>
+    <MobileMoreDrawer open={moreOpen} onClose={() => setMoreOpen(false)} />
+    </>
+  )
+}
+
+/* ---------------- Mobile "More" drawer ---------------- */
+export function MobileMoreDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { path } = useRoute()
+  const composer = useComposer()
+  return (
+    <Drawer open={open} onClose={onClose} title="More">
+      <div className="mnav-list">
+        {SECONDARY_NAV.map((n) => (
+          <button
+            key={n.to}
+            className={`mnav-item ${isActive(path, n.to) ? 'active' : ''}`}
+            onClick={() => {
+              navigate(n.to)
+              onClose()
+            }}
+          >
+            <n.icon size={19} strokeWidth={2} />
+            {n.label}
+          </button>
+        ))}
+        <button
+          className={`mnav-item ${isActive(path, '/settings') ? 'active' : ''}`}
+          onClick={() => {
+            navigate('/settings')
+            onClose()
+          }}
+        >
+          <SettingsIcon size={19} strokeWidth={2} />
+          Settings
+        </button>
+        <div className="divider" style={{ margin: 'var(--s-3) 0' }} />
+        <button
+          className="mnav-item"
+          onClick={() => {
+            composer.open('payment')
+            onClose()
+          }}
+        >
+          <Banknote size={19} strokeWidth={2} />
+          Record payment
+        </button>
+        <button
+          className="mnav-item"
+          onClick={() => {
+            composer.open('invoice')
+            onClose()
+          }}
+        >
+          <FileText size={19} strokeWidth={2} />
+          New invoice
+        </button>
+        <div className="divider" style={{ margin: 'var(--s-3) 0' }} />
+        <button
+          className="mnav-item"
+          style={{ color: 'var(--danger)' }}
+          onClick={() => {
+            store.signOut()
+            navigate('/')
+            onClose()
+          }}
+        >
+          <LogOut size={19} strokeWidth={2} />
+          Sign out
+        </button>
+      </div>
+    </Drawer>
   )
 }
 
 /* ---------------- Bottom nav (mobile) ---------------- */
 export function BottomNav() {
   const { path } = useRoute()
-  const [moreOpen, setMoreOpen] = useState(false)
-  const composer = useComposer()
-
-  const items = [
-    PRIMARY_NAV[0],
-    PRIMARY_NAV[1],
-    PRIMARY_NAV[2],
-    PRIMARY_NAV[3],
-  ]
 
   return (
-    <>
-      <nav className="bottom-nav" aria-label="Primary mobile">
-        {items.map((n) => (
-          <button
-            key={n.to}
-            className={`bn-item ${isActive(path, n.to) ? 'active' : ''}`}
-            onClick={() => navigate(n.to)}
-          >
-            <n.icon size={20} strokeWidth={2} />
-            <span className="bn-label">{n.label}</span>
-          </button>
-        ))}
-        <button className={`bn-item ${moreOpen ? 'active' : ''}`} onClick={() => setMoreOpen(true)}>
-          <MoreHorizontal size={20} strokeWidth={2} />
-          <span className="bn-label">More</span>
+    <nav className="bottom-nav" aria-label="Primary mobile">
+      {PRIMARY_NAV.map((n) => (
+        <button
+          key={n.to}
+          className={`bn-item ${isActive(path, n.to) ? 'active' : ''}`}
+          onClick={() => navigate(n.to)}
+        >
+          <n.icon size={20} strokeWidth={2} />
+          <span className="bn-label">{n.label}</span>
         </button>
-      </nav>
-
-      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
-        <div className="mnav-list">
-          {SECONDARY_NAV.map((n) => (
-            <button
-              key={n.to}
-              className={`mnav-item ${isActive(path, n.to) ? 'active' : ''}`}
-              onClick={() => {
-                navigate(n.to)
-                setMoreOpen(false)
-              }}
-            >
-              <n.icon size={19} strokeWidth={2} />
-              {n.label}
-            </button>
-          ))}
-          <button
-            className={`mnav-item ${isActive(path, '/settings') ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/settings')
-              setMoreOpen(false)
-            }}
-          >
-            <SettingsIcon size={19} strokeWidth={2} />
-            Settings
-          </button>
-          <div className="divider" style={{ margin: 'var(--s-3) 0' }} />
-          <button
-            className="mnav-item"
-            onClick={() => {
-              composer.open('payment')
-              setMoreOpen(false)
-            }}
-          >
-            <Banknote size={19} strokeWidth={2} />
-            Record payment
-          </button>
-          <button
-            className="mnav-item"
-            onClick={() => {
-              composer.open('invoice')
-              setMoreOpen(false)
-            }}
-          >
-            <FileText size={19} strokeWidth={2} />
-            New invoice
-          </button>
-          <div className="divider" style={{ margin: 'var(--s-3) 0' }} />
-          <button
-            className="mnav-item"
-            style={{ color: 'var(--danger)' }}
-            onClick={() => {
-              store.signOut()
-              navigate('/')
-              setMoreOpen(false)
-            }}
-          >
-            <LogOut size={19} strokeWidth={2} />
-            Sign out
-          </button>
-        </div>
-      </Drawer>
-    </>
+      ))}
+    </nav>
   )
 }
 
@@ -399,7 +401,6 @@ interface FabAction {
 const FAB_ACTIONS: FabAction[] = [
   { name: 'customer', label: 'New customer', icon: UserPlus },
   { name: 'sale', label: 'New sale', icon: ShoppingBag },
-  { name: 'job', label: 'New job', icon: Briefcase },
   { name: 'product', label: 'Add product', icon: Package },
   { name: 'income', label: 'Record income', icon: Banknote },
   { name: 'expense', label: 'Record expense', icon: ReceiptText },

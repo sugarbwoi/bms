@@ -11,6 +11,7 @@ import {
   TrendingDown,
   Clock,
   Briefcase,
+  ArrowLeftRight,
   ArrowRight,
   Plus,
   ShoppingBag,
@@ -43,6 +44,7 @@ import {
   goalProgress,
   salePaymentState,
   jobPaymentState,
+  unifiedTransactions,
 } from '../lib/derive'
 import {
   formatMoney,
@@ -108,11 +110,13 @@ export default function Dashboard() {
         .slice(0, 5),
     [db, businessId],
   )
+  const txns = useMemo(() => unifiedTransactions(db, businessId, range), [db, businessId, rangeKey])
+  const recentTxns = txns.slice(0, 5)
 
   const onboarding = biz ? store.getOnboarding(biz.id) : null
   const showChecklist = onboarding && !onboarding.completed && !onboarding.dismissed
 
-  const hasAnything = recentSales.length > 0 || activeJobs.length > 0 || activity.length > 0
+  const hasAnything = recentSales.length > 0 || txns.length > 0 || activity.length > 0
 
   return (
     <div className="stack gap-6">
@@ -189,10 +193,10 @@ export default function Dashboard() {
 
           <div className="pulse-card">
             <span className="ic jobs">
-              <Briefcase size={18} strokeWidth={2.2} />
+              <ArrowLeftRight size={18} strokeWidth={2.2} />
             </span>
-            <div className="v num">{p.activeJobs}</div>
-            <div className="l">Active jobs</div>
+            <div className="v num">{txns.length}</div>
+            <div className="l">Transactions</div>
           </div>
         </div>
 
@@ -315,38 +319,48 @@ export default function Dashboard() {
           </SectionCard>
         ) : flavor === 'service' ? (
           <SectionCard
-            title="Active jobs"
+            title="Recent transactions"
             action={
-              <button className="link" onClick={() => navigate('/jobs')}>
-                All jobs <ArrowRight size={14} />
+              <button className="link" onClick={() => navigate('/transactions')}>
+                All transactions <ArrowRight size={14} />
               </button>
             }
           >
-            {activeJobs.length === 0 ? (
-              <EmptyState icon={Briefcase} title="No active jobs" message="Create a job to track work in progress." action={<Button variant="primary" icon={Plus} onClick={() => composer.open('job')}>New job</Button>} />
+            {recentTxns.length === 0 ? (
+              <EmptyState
+                icon={ArrowLeftRight}
+                title="Nothing yet"
+                message="Record a sale, payment or expense to see it here."
+                action={<Button variant="primary" icon={Plus} onClick={() => composer.open('sale')}>New sale</Button>}
+              />
             ) : (
               <div className="stack gap-1">
-                {activeJobs.map((j) => {
-                  const cust = db.customers.find((c) => c.id === j.customer_id)
-                  const overdue = isOverdue(j.due_date)
-                  return (
-                    <button key={j.id} className="list-row" onClick={() => navigate(`/jobs/${j.id}`)}>
-                      <span className="list-main">
-                        <span className="list-title">{j.title}</span>
-                        <span className="list-sub">
-                          {cust ? cust.name : 'No customer'}
-                          {j.due_date ? ` · due ${formatDate(j.due_date)}` : ''}
-                        </span>
+                {recentTxns.map((t) => (
+                  <button
+                    key={`${t.kind}-${t.id}`}
+                    className="list-row"
+                    style={t.href ? undefined : { cursor: 'default' }}
+                    onClick={t.href ? () => navigate(t.href!) : undefined}
+                  >
+                    <span className="list-main">
+                      <span className="list-title mono">{t.reference}</span>
+                      <span className="list-sub">
+                        {t.label}
+                        {t.customer ? ` · ${t.customer}` : ''} · {formatDate(t.date)}
                       </span>
-                      <span className="list-end">
-                        <span className="num" style={{ fontWeight: 600 }}>
-                          {formatMoney(j.amount, currency)}
-                        </span>
-                        <StatusBadge status={overdue ? 'overdue' : j.status} />
+                    </span>
+                    <span className="list-end">
+                      <span
+                        className="num"
+                        style={{ fontWeight: 600, color: t.direction === 'in' ? 'var(--success)' : 'var(--text)' }}
+                      >
+                        {t.direction === 'in' ? '+' : '−'}
+                        {formatMoney(t.amount, currency)}
                       </span>
-                    </button>
-                  )
-                })}
+                      <StatusBadge status={t.status} />
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
           </SectionCard>
@@ -462,7 +476,7 @@ export default function Dashboard() {
           <SectionCard title="Quick actions">
             <div className="stack gap-2">
               <QuickAction icon={ShoppingBag} label="Record a sale" onClick={() => composer.open('sale')} />
-              <QuickAction icon={Briefcase} label="Create a job" onClick={() => composer.open('job')} />
+              <QuickAction icon={CircleDollarSign} label="Record a payment" onClick={() => composer.open('payment')} />
               <QuickAction icon={CircleDollarSign} label="Record income" onClick={() => composer.open('income')} />
               <QuickAction icon={ReceiptIcon} label="Record an expense" onClick={() => composer.open('expense')} />
               <QuickAction icon={Package} label="Add a product" onClick={() => composer.open('product')} />
