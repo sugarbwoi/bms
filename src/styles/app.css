@@ -332,6 +332,14 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--s-5);
 }
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid-form-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .grid-main {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
@@ -467,6 +475,25 @@
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text);
+}
+
+/* ---------- Discount control (Stage 8) ---------- */
+.discount-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.discount-field .discount-input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.discount-note {
+  display: inline-block;
+  margin-top: var(--s-2);
+  font-size: var(--fs-13);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Receipt ---------- */
@@ -791,6 +818,15 @@
   }
   .grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-form-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .grid-form,
+  .grid-form-3 {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 1080px) {

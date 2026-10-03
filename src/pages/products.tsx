@@ -107,7 +107,7 @@ function ProductList() {
           <span className="ic in">
             <TrendingUp size={18} strokeWidth={2.2} />
           </span>
-          <div className="v num">{formatMoney(invValue, currency, { compact: true })}</div>
+          <div className="v num">{formatMoney(invValue, currency)}</div>
           <div className="l">Stock value (at cost)</div>
         </div>
         <div className="pulse-card">

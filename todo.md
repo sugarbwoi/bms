@@ -41,12 +41,15 @@ Black & white Liquid Glass identity. Light/Dark only. Mobile first.
 - [x] Test 320–1920px
 
 ## Stage 7 — Number formatting
-- [ ] 1,000 / 1,000,000 / 1,000.50 consistently
-- [ ] Never change stored values
+- [x] 1,000 / 1,000,000 / 1,000.50 consistently
+- [x] Never change stored values
 
 ## Stage 8 — Discounts
-- [ ] Percentage (0-100) + fixed (<= subtotal)
-- [ ] Applied correctly in totals
+- [x] Percentage (0-100) + fixed (<= subtotal)
+- [x] Applied correctly in totals (sale + invoice composers, store, derive)
+- [x] Unify formatMoney to symbol-based grouping (₦1,000.50) for consistency
+- [x] Receipt print styles -> neutral black/white
+- [x] Composer form grids responsive (stack on mobile, no overflow)
 
 ## Stage 9 — Transactions replace Jobs
 - [ ] Migrate Jobs -> Transactions safely

@@ -13,7 +13,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react'
 import { X, Search, ChevronDown, AlertCircle, Check } from 'lucide-react'
-import { formatMoney } from '../lib/utils'
+import { formatMoney, formatMoneyShort } from '../lib/utils'
 import type { Minor } from '../lib/types'
 
 /* ---------------- Surface ---------------- */
@@ -451,7 +451,7 @@ export function Stat({
 
 /* ---------------- Money ---------------- */
 export function Money({ value, currency, className = '', short }: { value: Minor; currency: string; className?: string; short?: boolean }) {
-  return <span className={`num ${className}`}>{formatMoney(value, currency, { compact: short })}</span>
+  return <span className={`num ${className}`}>{short ? formatMoneyShort(value, currency) : formatMoney(value, currency)}</span>
 }
 
 /* ---------------- Dropdown menu ---------------- */

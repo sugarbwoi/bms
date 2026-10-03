@@ -311,7 +311,7 @@ export function progress(db: DB, businessId: ID, range: Range): ProgressMetrics 
     const from = d.toISOString()
     const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString()
     const m = moneySummary(db, businessId, { from, to })
-    series.push({ label: d.toLocaleString(undefined, { month: 'short' }), value: m.moneyIn })
+    series.push({ label: d.toLocaleString('en-US', { month: 'short' }), value: m.moneyIn })
   }
 
   return {

@@ -141,7 +141,7 @@ export default function Progress() {
                 return (
                   <div key={i} className="stack gap-2" style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
                     <span className="text-xs muted num" style={{ fontSize: 10 }}>
-                      {s.value > 0 ? formatMoney(s.value, currency, { compact: true }) : ''}
+                      {s.value > 0 ? formatMoney(s.value, currency) : ''}
                     </span>
                     <div
                       title={formatMoney(s.value, currency)}

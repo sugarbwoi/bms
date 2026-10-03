@@ -36,18 +36,18 @@ export function ReceiptView({ receipt, onClose }: { receipt: Receipt | null; onC
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <style>
         * { box-sizing: border-box; }
-        body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #171716; padding: 28px; margin: 0; }
+        body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; padding: 28px; margin: 0; }
         .rcp { max-width: 340px; margin: 0 auto; }
         .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 20px; }
-        .muted { color: #6F6B64; font-size: 12px; }
-        .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #E4DFD6; font-size: 13px; }
-        .row.total { border-bottom: none; border-top: 2px solid #171716; margin-top: 6px; padding-top: 12px; font-size: 16px; font-weight: 700; }
-        .k { color: #6F6B64; }
+        .muted { color: #6b6b6b; font-size: 12px; }
+        .row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed #d8d8d8; font-size: 13px; }
+        .row.total { border-bottom: none; border-top: 2px solid #000; margin-top: 6px; padding-top: 12px; font-size: 16px; font-weight: 700; }
+        .k { color: #6b6b6b; }
         .v { font-weight: 600; text-align: right; }
         h1 { font-size: 15px; margin: 0 0 2px; }
-        .head { text-align: center; padding-bottom: 14px; border-bottom: 1px solid #E4DFD6; margin-bottom: 12px; }
-        .badge { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: #EAF2E6; color: #3C7A2E; font-weight: 600; }
-        .foot { text-align: center; margin-top: 18px; color: #6F6B64; font-size: 11px; }
+        .head { text-align: center; padding-bottom: 14px; border-bottom: 1px solid #d8d8d8; margin-bottom: 12px; }
+        .badge { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: #f0f0f0; color: #000; font-weight: 600; }
+        .foot { text-align: center; margin-top: 18px; color: #6b6b6b; font-size: 11px; }
       </style></head><body><div class="rcp">${node.innerHTML}</div>
       <script>window.onload = function(){ window.print(); }</script>
       </body></html>`)

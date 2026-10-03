@@ -67,34 +67,45 @@ export function parseAmount(input: string, currency = 'NGN'): Minor | null {
   return toMinor(n, currency)
 }
 
-export function formatMoney(minor: Minor, currency = 'NGN', opts?: { compact?: boolean }): string {
+/**
+ * Format minor units as a grouped amount with the currency symbol, e.g. ₦1,000.50.
+ * Uses a fixed 'en-US' grouping so amounts look identical on every device/locale,
+ * and the app's own currency symbol map so the symbol is always consistent with
+ * inputs and headline figures (never the "NGN 1,000" code fallback).
+ * Never changes the stored value.
+ */
+export function formatMoney(minor: Minor, currency = 'NGN'): string {
   const d = currencyDecimals(currency)
   const value = minor / Math.pow(10, d)
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: opts?.compact ? 0 : d,
-      maximumFractionDigits: opts?.compact ? 0 : d,
-      notation: opts?.compact ? 'compact' : 'standard',
-    }).format(value)
-  } catch {
-    return `${currencySymbol(currency)}${value.toLocaleString()}`
-  }
+  const sym = currencySymbol(currency)
+  const sign = value < 0 ? '-' : ''
+  const num = Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  })
+  return `${sign}${sym}${num}`
 }
 
-/** Format minor units as a plain grouped number with symbol, no decimals (for big KPIs). */
+/**
+ * Format minor units as a grouped number with currency symbol, no decimals.
+ * Used for headline KPIs. Always uses exact thousands grouping (1,000 / 1,000,000),
+ * never compact "k"/"M" notation, so amounts are never ambiguous.
+ */
 export function formatMoneyShort(minor: Minor, currency = 'NGN'): string {
   const d = currencyDecimals(currency)
   const value = minor / Math.pow(10, d)
   const sym = currencySymbol(currency)
-  if (Math.abs(value) >= 1_000_000) return `${sym}${(value / 1_000_000).toFixed(1)}M`
-  if (Math.abs(value) >= 10_000) return `${sym}${(value / 1000).toFixed(0)}k`
-  return `${sym}${value.toLocaleString(undefined, { maximumFractionDigits: d })}`
+  const sign = value < 0 ? '-' : ''
+  return `${sign}${sym}${Math.abs(Math.round(value)).toLocaleString('en-US')}`
 }
 
 export function formatNumber(n: number): string {
-  return new Intl.NumberFormat().format(n)
+  return new Intl.NumberFormat('en-US').format(n)
+}
+
+/** Format a quantity/stock number with thousands grouping (1,000). Never changes stored value. */
+export function formatQty(n: number): string {
+  return new Intl.NumberFormat('en-US').format(n)
 }
 
 /* ---------------- Dates ---------------- */

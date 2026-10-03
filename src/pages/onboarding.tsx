@@ -151,7 +151,7 @@ export default function Onboarding() {
                   placeholder="e.g. Bespoke tailoring, fabrics and alterations in Lagos."
                 />
               </Field>
-              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+              <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
                 <Field label="Currency">
                   <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                     {CURRENCIES.map((c) => (

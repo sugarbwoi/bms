@@ -62,6 +62,90 @@ function AmountInput({
   )
 }
 
+/* ---------------- Discount (Stage 8) ---------------- */
+/**
+ * Compute a discount in integer minor units, clamped per product rules:
+ * - Percentage is limited to 0-100.
+ * - Fixed amount cannot exceed the subtotal.
+ * Never mutates stored values; only used for display + the amount persisted.
+ */
+function computeDiscount(type: 'percent' | 'fixed', value: string, subtotal: Minor, currency: string): Minor {
+  if (type === 'percent') {
+    const pct = Math.max(0, Math.min(100, Number(value) || 0))
+    return Math.round((subtotal * pct) / 100)
+  }
+  const raw = parseAmount(value, currency) || 0
+  return Math.max(0, Math.min(raw, subtotal))
+}
+
+function clampPct(value: string): number {
+  return Math.min(100, Math.max(0, Number(value) || 0))
+}
+
+function DiscountField({
+  type,
+  onTypeChange,
+  value,
+  onChange,
+  currency,
+  discountMinor,
+}: {
+  type: 'percent' | 'fixed'
+  onTypeChange: (t: 'percent' | 'fixed') => void
+  value: string
+  onChange: (v: string) => void
+  currency: string
+  discountMinor: Minor
+}) {
+  return (
+    <Field
+      label="Discount"
+      hint={type === 'percent' ? 'Percentage of the subtotal (0-100).' : 'Fixed amount, cannot be more than the subtotal.'}
+    >
+      <div className="discount-field">
+        <div className="segmented" role="tablist" aria-label="Discount type">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={type === 'percent'}
+            className={type === 'percent' ? 'active' : ''}
+            onClick={() => onTypeChange('percent')}
+          >
+            %
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={type === 'fixed'}
+            className={type === 'fixed' ? 'active' : ''}
+            onClick={() => onTypeChange('fixed')}
+          >
+            Fixed
+          </button>
+        </div>
+        <div className="discount-input">
+          {type === 'percent' ? (
+            <div className="input-affix affix-end">
+              <input
+                className="input"
+                inputMode="decimal"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="0"
+                aria-label="Discount percentage"
+              />
+              <span className="affix">%</span>
+            </div>
+          ) : (
+            <AmountInput value={value} onChange={onChange} currency={currency} placeholder="0.00" />
+          )}
+        </div>
+      </div>
+      {discountMinor > 0 && <span className="discount-note">= {formatMoney(discountMinor, currency)} off</span>}
+    </Field>
+  )
+}
+
 /* ============================================================
    CUSTOMER
    ============================================================ */
@@ -114,7 +198,7 @@ export function CustomerForm({ params, onClose, onDone }: { params: ComposerPara
         <Field label="Full name" required error={errors.name}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Chioma Nwosu" autoFocus invalid={!!errors.name} />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Email" error={errors.email}>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@email.com" invalid={!!errors.email} />
           </Field>
@@ -217,7 +301,7 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
         <Field label="Description">
           <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description" />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Selling price" required error={errors.selling_price}>
             <AmountInput value={selling} onChange={setSelling} currency={biz.currency} invalid={!!errors.selling_price} />
           </Field>
@@ -225,7 +309,7 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
             <AmountInput value={cost} onChange={setCost} currency={biz.currency} />
           </Field>
         </div>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="SKU / code">
             <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Optional" />
           </Field>
@@ -262,7 +346,9 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
 
   const [customerId, setCustomerId] = useState(params.customer_id || '')
   const [lines, setLines] = useState<Line[]>([{ key: uid('l'), product_id: null, description: '', quantity: '1', unit_price: '' }])
-  const [discount, setDiscount] = useState('')
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('fixed')
+  const [discountPct, setDiscountPct] = useState('')
+  const [discountFixed, setDiscountFixed] = useState('')
   const [paid, setPaid] = useState('')
   const [method, setMethod] = useState('transfer')
   const [date, setDate] = useState(todayISODate())
@@ -273,7 +359,10 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
     () => lines.reduce((a, l) => a + (parseAmount(l.unit_price, biz.currency) || 0) * (Number(l.quantity) || 0), 0),
     [lines, biz.currency],
   )
-  const discountMinor = parseAmount(discount, biz.currency) || 0
+  const discountValue = discountType === 'percent' ? discountPct : discountFixed
+  const discountMinor = computeDiscount(discountType, discountValue, subtotal, biz.currency)
+  const discountLabel =
+    discountType === 'percent' && discountMinor > 0 ? `Discount (${clampPct(discountPct)}%)` : 'Discount'
   const total = Math.max(0, subtotal - discountMinor)
   const paidMinor = parseAmount(paid, biz.currency) || 0
   const balance = Math.max(0, total - paidMinor)
@@ -341,7 +430,7 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
     >
       {err && <ErrorBanner>{err}</ErrorBanner>}
       <div className="composer mt-2">
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Customer" hint="Optional — leave blank for walk-in.">
             <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
               <option value="">Walk-in / no customer</option>
@@ -404,11 +493,16 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
           </Button>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-5)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-5)' }}>
           <div className="stack gap-4">
-            <Field label="Discount">
-              <AmountInput value={discount} onChange={setDiscount} currency={biz.currency} placeholder="0.00" />
-            </Field>
+            <DiscountField
+              type={discountType}
+              onTypeChange={setDiscountType}
+              value={discountValue}
+              onChange={discountType === 'percent' ? setDiscountPct : setDiscountFixed}
+              currency={biz.currency}
+              discountMinor={discountMinor}
+            />
             <Field label="Amount paid now" hint="Leave blank if not paying yet.">
               <AmountInput value={paid} onChange={setPaid} currency={biz.currency} placeholder="0.00" />
             </Field>
@@ -428,7 +522,7 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
               <span className="v">{formatMoney(subtotal, biz.currency)}</span>
             </div>
             <div className="tr">
-              <span>Discount</span>
+              <span>{discountLabel}</span>
               <span className="v">− {formatMoney(discountMinor, biz.currency)}</span>
             </div>
             <div className="tr grand">
@@ -552,7 +646,7 @@ export function JobForm({ params, onClose, onDone }: { params: ComposerParams; o
         <Field label="Description">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this job involve?" />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Amount" required error={errors.amount}>
             <AmountInput value={amount} onChange={setAmount} currency={biz.currency} invalid={!!errors.amount} />
           </Field>
@@ -660,7 +754,7 @@ export function TransactionForm({
         <Field label="Amount" required error={errors.amount}>
           <AmountInput value={amount} onChange={setAmount} currency={biz.currency} autoFocus invalid={!!errors.amount} />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Category">
             <Select value={category} onChange={(e) => setCategory(e.target.value)}>
               {cats.map((c) => (
@@ -828,7 +922,7 @@ export function PaymentComposer({ params, onClose, onDone }: { params: ComposerP
         <Field label="Amount" required error={errors.amount} hint={selected ? `Balance: ${formatMoney(selected.balance, biz.currency)}` : undefined}>
           <AmountInput value={amount} onChange={setAmount} currency={biz.currency} autoFocus invalid={!!errors.amount} />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Method">
             <Select value={method} onChange={(e) => setMethod(e.target.value)}>
               {METHODS.map((m) => (
@@ -861,7 +955,9 @@ export function InvoiceComposer({ params, onClose, onDone }: { params: ComposerP
   const customers = db.customers.filter((c) => c.business_id === biz.id && c.status === 'active')
   const [customerId, setCustomerId] = useState(params.customer_id || '')
   const [lines, setLines] = useState<Line[]>([{ key: uid('l'), product_id: null, description: '', quantity: '1', unit_price: '' }])
-  const [discount, setDiscount] = useState('')
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('fixed')
+  const [discountPct, setDiscountPct] = useState('')
+  const [discountFixed, setDiscountFixed] = useState('')
   const [issue, setIssue] = useState(todayISODate())
   const [due, setDue] = useState('')
   const [notes, setNotes] = useState('')
@@ -872,7 +968,10 @@ export function InvoiceComposer({ params, onClose, onDone }: { params: ComposerP
     () => lines.reduce((a, l) => a + (parseAmount(l.unit_price, biz.currency) || 0) * (Number(l.quantity) || 0), 0),
     [lines, biz.currency],
   )
-  const discountMinor = parseAmount(discount, biz.currency) || 0
+  const discountValue = discountType === 'percent' ? discountPct : discountFixed
+  const discountMinor = computeDiscount(discountType, discountValue, subtotal, biz.currency)
+  const discountLabel =
+    discountType === 'percent' && discountMinor > 0 ? `Discount (${clampPct(discountPct)}%)` : 'Discount'
   const total = Math.max(0, subtotal - discountMinor)
 
   const setLine = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)))
@@ -929,7 +1028,7 @@ export function InvoiceComposer({ params, onClose, onDone }: { params: ComposerP
     >
       {err && <ErrorBanner>{err}</ErrorBanner>}
       <div className="composer mt-2">
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form-3" style={{ gap: 'var(--s-4)' }}>
           <Field label="Customer">
             <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
               <option value="">No customer</option>
@@ -983,11 +1082,16 @@ export function InvoiceComposer({ params, onClose, onDone }: { params: ComposerP
           </Button>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-5)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-5)' }}>
           <div className="stack gap-4">
-            <Field label="Discount">
-              <AmountInput value={discount} onChange={setDiscount} currency={biz.currency} placeholder="0.00" />
-            </Field>
+            <DiscountField
+              type={discountType}
+              onTypeChange={setDiscountType}
+              value={discountValue}
+              onChange={discountType === 'percent' ? setDiscountPct : setDiscountFixed}
+              currency={biz.currency}
+              discountMinor={discountMinor}
+            />
             <Field label="Status">
               <Select value={status} onChange={(e) => setStatus(e.target.value as any)}>
                 <option value="issued">Issue now</option>
@@ -1004,7 +1108,7 @@ export function InvoiceComposer({ params, onClose, onDone }: { params: ComposerP
               <span className="v">{formatMoney(subtotal, biz.currency)}</span>
             </div>
             <div className="tr">
-              <span>Discount</span>
+              <span>{discountLabel}</span>
               <span className="v">− {formatMoney(discountMinor, biz.currency)}</span>
             </div>
             <div className="tr grand">
@@ -1196,7 +1300,7 @@ export function GoalForm({ params, onClose, onDone }: { params: ComposerParams; 
             <Input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} />
           )}
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Start date">
             <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
           </Field>
@@ -1255,7 +1359,7 @@ export function BusinessForm({ params, onClose, onDone }: { params: ComposerPara
         <Field label="Description">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
+        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Currency">
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {['NGN', 'USD', 'GBP', 'EUR', 'GHS', 'KES', 'ZAR'].map((c) => (

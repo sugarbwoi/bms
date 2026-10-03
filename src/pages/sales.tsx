@@ -108,7 +108,7 @@ function SaleList() {
           <span className="ic in">
             <CircleDollarSign size={18} strokeWidth={2.2} />
           </span>
-          <div className="v num">{formatMoney(totalValue, currency, { compact: true })}</div>
+          <div className="v num">{formatMoney(totalValue, currency)}</div>
           <div className="l">Total value</div>
         </div>
         <div className="pulse-card">

@@ -278,6 +278,14 @@
 .input-affix .input {
   padding-left: 34px;
 }
+.input-affix.affix-end .affix {
+  left: auto;
+  right: var(--s-4);
+}
+.input-affix.affix-end .input {
+  padding-left: var(--s-4);
+  padding-right: 34px;
+}
 
 /* search */
 .search {
