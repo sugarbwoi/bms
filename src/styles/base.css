@@ -31,6 +31,7 @@ body {
   font-variant-numeric: tabular-nums;
   overflow-x: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
   transition: background var(--dur-3) var(--ease-out), color var(--dur-3) var(--ease-out);
 }
 
@@ -325,7 +326,7 @@ body.reduce-effects {
   animation: fade var(--dur-3) var(--ease-out) both;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .hide-mobile {
     display: none !important;
   }

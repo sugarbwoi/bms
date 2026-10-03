@@ -42,7 +42,7 @@ function AuthAside() {
         <div className="stack gap-3">
           {[
             { icon: Wallet, t: 'Exact money, always', d: 'Every total is computed from real events.' },
-            { icon: Users, t: 'Customers & jobs in view', d: 'See who owes what, at a glance.' },
+            { icon: Users, t: 'Customers & sales in view', d: 'See who owes what, at a glance.' },
             { icon: Briefcase, t: 'Built for real work', d: 'Products, services, or both.' },
           ].map((f, i) => (
             <div className="row gap-3" key={i}>

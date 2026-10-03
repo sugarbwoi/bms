@@ -339,7 +339,7 @@ export function EmptyState({
       </div>
       <h3>{title}</h3>
       <p className="muted">{message}</p>
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-4 empty-action">{action}</div>}
     </div>
   )
 }

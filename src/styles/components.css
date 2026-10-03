@@ -304,6 +304,15 @@
   background: var(--tint);
   border-radius: var(--r-pill);
   border: 1px solid var(--glass-border);
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.segmented::-webkit-scrollbar {
+  display: none;
 }
 .segmented button {
   font-family: inherit;
@@ -607,6 +616,15 @@
   max-width: 380px;
   font-size: var(--fs-14);
 }
+.empty-action {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+}
+.empty-action .row {
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .skeleton {
   border-radius: var(--r-sm);
   background: linear-gradient(90deg, var(--tint) 25%, color-mix(in srgb, var(--text) 6%, transparent) 50%, var(--tint) 75%);
@@ -718,9 +736,17 @@
   }
 }
 @media (max-width: 600px) {
+  /* Prevent iOS auto-zoom on focus by keeping fields at >=16px */
+  .input,
+  .select,
+  .textarea,
+  .input-affix .input {
+    font-size: 16px;
+  }
   .drawer {
     width: 100vw;
     border-left: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .overlay {
     align-items: flex-end;
@@ -729,8 +755,18 @@
   .modal {
     max-width: 100%;
     border-radius: var(--r-lg) var(--r-lg) 0 0;
-    max-height: 92vh;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px));
     animation: pop var(--dur-3) var(--ease-spring);
+  }
+  .modal-body {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-foot {
+    padding-bottom: calc(var(--s-6) + env(safe-area-inset-bottom, 0px));
+  }
+  .toast-wrap {
+    bottom: calc(var(--s-6) + env(safe-area-inset-bottom, 0px));
   }
 }
 

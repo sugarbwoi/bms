@@ -186,49 +186,51 @@ export function TopNav() {
       </div>
 
       <div className="nav-actions">
-        <Button variant="primary" size="sm" icon={Plus} onClick={() => composer.open('sale')}>
-          New sale
-        </Button>
-        {businesses.length > 1 && (
-          <Menu
-            trigger={({ toggle }) => (
-              <button className="btn btn-soft btn-sm" onClick={toggle} title="Switch business">
-                <Building2 size={16} />
-                <span className="hide-mobile">{biz?.name}</span>
-                <ChevronDown size={14} />
-              </button>
-            )}
-          >
-            {(close) => (
-              <>
-                <div className="menu-label">Businesses</div>
-                {businesses.map((b) => (
+        <div className="nav-actions-extra">
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => composer.open('sale')}>
+            New sale
+          </Button>
+          {businesses.length > 1 && (
+            <Menu
+              trigger={({ toggle }) => (
+                <button className="btn btn-soft btn-sm" onClick={toggle} title="Switch business">
+                  <Building2 size={16} />
+                  <span className="hide-mobile">{biz?.name}</span>
+                  <ChevronDown size={14} />
+                </button>
+              )}
+            >
+              {(close) => (
+                <>
+                  <div className="menu-label">Businesses</div>
+                  {businesses.map((b) => (
+                    <MenuItem
+                      key={b.id}
+                      icon={b.id === biz?.id ? Check : Building2}
+                      active={b.id === biz?.id}
+                      onClick={() => {
+                        store.switchBusiness(b.id)
+                        close()
+                      }}
+                    >
+                      {b.name}
+                    </MenuItem>
+                  ))}
+                  <div className="menu-sep" />
                   <MenuItem
-                    key={b.id}
-                    icon={b.id === biz?.id ? Check : Building2}
-                    active={b.id === biz?.id}
+                    icon={Plus}
                     onClick={() => {
-                      store.switchBusiness(b.id)
+                      composer.open('business')
                       close()
                     }}
                   >
-                    {b.name}
+                    Business settings
                   </MenuItem>
-                ))}
-                <div className="menu-sep" />
-                <MenuItem
-                  icon={Plus}
-                  onClick={() => {
-                    composer.open('business')
-                    close()
-                  }}
-                >
-                  Business settings
-                </MenuItem>
-              </>
-            )}
-          </Menu>
-        )}
+                </>
+              )}
+            </Menu>
+          )}
+        </div>
         <Menu
           trigger={({ toggle }) => (
             <button
@@ -313,12 +315,12 @@ export function BottomNav() {
             onClick={() => navigate(n.to)}
           >
             <n.icon size={20} strokeWidth={2} />
-            {n.label}
+            <span className="bn-label">{n.label}</span>
           </button>
         ))}
         <button className={`bn-item ${moreOpen ? 'active' : ''}`} onClick={() => setMoreOpen(true)}>
           <MoreHorizontal size={20} strokeWidth={2} />
-          More
+          <span className="bn-label">More</span>
         </button>
       </nav>
 

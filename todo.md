@@ -30,15 +30,15 @@ Black & white Liquid Glass identity. Light/Dark only. Mobile first.
 - [x] Apply across nav, cards, modals, drawers, bottom nav, FAB
 
 ## Stage 5 — Public website Liquid Glass redesign
-- [ ] Rebuild marketing pages with Liquid Glass B/W identity
-- [ ] Update copy to simple language
+- [x] Rebuild marketing pages with Liquid Glass B/W identity
+- [x] Update copy to simple language
 
 ## Stage 6 — Mobile layout (very high)
-- [ ] No overflow, centering, safe areas
-- [ ] Liquid Glass bottom nav
-- [ ] Mobile forms 16px inputs (no iOS zoom)
-- [ ] Modals within viewport
-- [ ] Test 320–1920px
+- [x] No overflow, centering, safe areas
+- [x] Liquid Glass bottom nav
+- [x] Mobile forms 16px inputs (no iOS zoom)
+- [x] Modals within viewport
+- [x] Test 320–1920px
 
 ## Stage 7 — Number formatting
 - [ ] 1,000 / 1,000,000 / 1,000.50 consistently
