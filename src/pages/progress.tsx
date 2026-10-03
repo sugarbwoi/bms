@@ -8,12 +8,11 @@ import {
   Target,
   Plus,
   TrendingUp,
-  Briefcase,
+  Clock,
   ShoppingCart,
   Users,
   CircleDollarSign,
   PackageX,
-  Trophy,
   BarChart3,
   MoreVertical,
   Pencil,
@@ -59,7 +58,6 @@ const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
 
 const GOAL_LABELS: Record<string, string> = {
   revenue: 'Revenue received',
-  jobs: 'Jobs completed',
   sales: 'Sales made',
   customers: 'New customers',
 }
@@ -109,11 +107,11 @@ export default function Progress() {
           <div className="l">Revenue received</div>
         </div>
         <div className="pulse-card">
-          <span className="ic jobs">
-            <Briefcase size={18} strokeWidth={2.2} />
+          <span className="ic due">
+            <Clock size={18} strokeWidth={2.2} />
           </span>
-          <div className="v num">{m.jobsCompleted}</div>
-          <div className="l">Jobs completed</div>
+          <div className="v num">{formatMoney(owed.total, currency)}</div>
+          <div className="l">Outstanding</div>
         </div>
         <div className="pulse-card">
           <span className="ic">
@@ -227,10 +225,10 @@ export default function Progress() {
         <div className="stack gap-5">
           <SectionCard title="This period at a glance">
             <div className="stack gap-4">
-              <Metric icon={<Briefcase size={16} />} label="Active jobs" value={String(m.jobsActive)} />
               <Metric icon={<CircleDollarSign size={16} />} label="Outstanding" value={formatMoney(owed.total, currency)} />
               <Metric icon={<PackageX size={16} />} label="Low stock items" value={String(m.lowStockCount)} />
-              <Metric icon={<Trophy size={16} />} label="Jobs completed" value={String(m.jobsCompleted)} />
+              <Metric icon={<ShoppingCart size={16} />} label="Sales made" value={String(m.salesCount)} />
+              <Metric icon={<Users size={16} />} label="New customers" value={String(m.newCustomers)} />
             </div>
           </SectionCard>
 

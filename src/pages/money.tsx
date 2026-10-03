@@ -34,9 +34,13 @@ import {
   EmptyState,
   SectionCard,
   ProgressBar,
+  Menu,
+  MenuItem,
 } from '../components/ui'
 import { scope, moneySummary, outstanding, type Range } from '../lib/derive'
 import { formatMoney, formatDate, formatDateTime, startOfMonth, daysAgo } from '../lib/utils'
+import { downloadCSV, downloadExcel, printTable, shareCSV } from '../lib/export'
+import { Download, FileSpreadsheet, FileText, Share2 } from 'lucide-react'
 import type { Transaction } from '../lib/types'
 
 type RangeKey = 'month' | '30d' | '90d' | 'all'
@@ -168,6 +172,43 @@ export default function Money() {
 
   const netPositive = summary.net >= 0
 
+  const exportHeaders = ['Date', 'Type', 'Description', 'Detail', 'Direction', 'Amount']
+  const exportRows = () =>
+    filtered.map((r) => [
+      formatDate(r.date),
+      r.kind,
+      r.title,
+      r.sub,
+      r.direction === 'in' ? 'In' : 'Out',
+      formatMoney(r.amount, currency),
+    ])
+  const stamp = new Date().toISOString().slice(0, 10)
+  const baseName = `kudii-money-${stamp}`
+  const rangeLabel = RANGE_OPTIONS.find((o) => o.value === rangeKey)?.label || ''
+
+  const doCSV = () => {
+    downloadCSV(`${baseName}.csv`, exportHeaders, exportRows())
+    toast.push('CSV downloaded')
+  }
+  const doExcel = () => {
+    downloadExcel(`${baseName}.xls`, 'Money ledger', exportHeaders, exportRows())
+    toast.push('Excel file downloaded')
+  }
+  const doPDF = () => {
+    const ok = printTable(
+      { title: 'Money ledger', subtitle: rangeLabel, business: biz?.name, currency },
+      exportHeaders,
+      exportRows(),
+    )
+    if (!ok) toast.push('Allow pop-ups to export a PDF', 'error')
+  }
+  const doShare = async () => {
+    const res = await shareCSV(`${baseName}.csv`, 'KUDII money ledger', exportHeaders, exportRows())
+    if (!res.ok) toast.push('Could not share that file', 'error')
+    else if (res.shared) toast.push('Shared')
+    else if (!res.cancelled) toast.push('CSV downloaded')
+  }
+
   return (
     <div className="stack gap-6">
       <PageHead
@@ -175,6 +216,31 @@ export default function Money() {
         sub="What came in, what went out, and what you're still owed."
         actions={
           <div className="row gap-2 wrap">
+            <Menu
+              align="right"
+              trigger={({ toggle }) => (
+                <Button variant="soft" icon={Download} onClick={toggle}>
+                  Export
+                </Button>
+              )}
+            >
+              {(close) => (
+                <>
+                  <MenuItem icon={Download} onClick={() => { doCSV(); close() }}>
+                    Download CSV
+                  </MenuItem>
+                  <MenuItem icon={FileSpreadsheet} onClick={() => { doExcel(); close() }}>
+                    Download Excel
+                  </MenuItem>
+                  <MenuItem icon={FileText} onClick={() => { doPDF(); close() }}>
+                    Print / Save as PDF
+                  </MenuItem>
+                  <MenuItem icon={Share2} onClick={() => { doShare(); close() }}>
+                    Share
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
             <Button variant="soft" icon={ArrowDownLeft} onClick={() => composer.open('income')}>
               Record income
             </Button>
@@ -362,12 +428,6 @@ export default function Money() {
                 onClick={() => navigate('/sales')}
               />
               <MiniRow
-                label="Jobs"
-                value={owed.jobs}
-                currency={currency}
-                onClick={() => navigate('/jobs')}
-              />
-              <MiniRow
                 label="Invoices"
                 value={owed.invoices}
                 currency={currency}
@@ -395,7 +455,7 @@ export default function Money() {
 
           <SectionCard title="How this works">
             <p className="text-sm muted">
-              Creating a sale, job, or invoice does <strong>not</strong> count as money received. Only recorded
+              Creating a sale or invoice does <strong>not</strong> count as money received. Only recorded
               payments count as money in. That's why your balance sheet always tells the truth.
             </p>
             <div className="row gap-2 mt-4" style={{ alignItems: 'center', color: 'var(--text-2)' }}>

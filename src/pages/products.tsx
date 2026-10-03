@@ -21,11 +21,13 @@ import {
   Search as SearchIcon,
   TrendingUp,
 } from 'lucide-react'
-import { useDB, useConfirm, useToast } from '../lib/hooks'
+import { useDB, useConfirm, useToast, useUser } from '../lib/hooks'
 import { store } from '../lib/store'
 import { navigate } from '../lib/router'
 import { useComposer } from '../components/composer-context'
 import { PageHead } from '../components/shell'
+import { planOf, usage } from '../lib/derive'
+import { PLANS } from '../lib/plans'
 import {
   Button,
   IconButton,
@@ -55,6 +57,7 @@ function ProductList() {
   const db = useDB()
   const biz = store.activeBusiness()
   const composer = useComposer()
+  const user = useUser()
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<'all' | 'low' | 'archived'>('all')
 
@@ -64,6 +67,11 @@ function ProductList() {
   const all = scope.products(db, businessId)
   const low = lowStockProducts(db, businessId)
 
+  const plan = biz ? planOf(db, biz.id) : 'free'
+  const limit = PLANS[plan].limits.products
+  const use = user ? usage(db, businessId, user.id) : null
+  const atLimit = limit !== null && !!use && use.products >= limit
+
   const products = useMemo(() => {
     let list = all.filter((p) => p.status === 'active')
     if (tab === 'low') list = low
@@ -71,7 +79,7 @@ function ProductList() {
     list = [...list].sort((a, b) => a.name.localeCompare(b.name))
     const q = query.trim().toLowerCase()
     if (!q) return list
-    return list.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    return list.filter((p) => p.name.toLowerCase().includes(q))
   }, [db, businessId, query, tab])
 
   const invValue = inventoryValue(db, businessId)
@@ -90,7 +98,7 @@ function ProductList() {
 
       <div className="pulse-grid">
         <div className="pulse-card">
-          <span className="ic jobs">
+          <span className="ic neutral">
             <Package size={18} strokeWidth={2.2} />
           </span>
           <div className="v num">{all.filter((p) => p.status === 'active').length}</div>
@@ -119,8 +127,22 @@ function ProductList() {
         </div>
       </div>
 
+      {limit !== null && use && (
+        <div className="row-between" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <span className="text-sm muted">
+            {use.products} of {limit} products on {PLANS[plan].name}
+            {atLimit ? ' — limit reached' : ''}
+          </span>
+          {atLimit && (
+            <Button variant="soft" size="sm" onClick={() => navigate('/settings?tab=plan')}>
+              Upgrade for more
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="row gap-3 wrap">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search by name or SKU…" className="grow" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Search products…" className="grow" />
         <Segmented
           value={tab}
           onChange={setTab}
@@ -171,7 +193,6 @@ function ProductList() {
                     )}
                   </span>
                   <span className="list-sub">
-                    {p.sku ? `${p.sku} · ` : ''}
                     {formatMoney(p.selling_price, currency)}
                   </span>
                 </span>
@@ -275,7 +296,6 @@ function ProductDetail({ id }: { id: string }) {
             </Badge>
           </div>
           <div className="row gap-4 wrap mt-2" style={{ color: 'var(--text-2)', fontSize: 'var(--fs-13)' }}>
-            {product.sku && <span className="mono">{product.sku}</span>}
             <span>Sells for {formatMoney(product.selling_price, currency)}</span>
             {product.cost_price > 0 && <span>Costs {formatMoney(product.cost_price, currency)}</span>}
           </div>

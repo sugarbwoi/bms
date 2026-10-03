@@ -1,9 +1,13 @@
 # KUDII — robots.txt
 User-agent: *
 Allow: /
+
+# The signed-in application is not indexable; only the public site is.
+# (KUDII uses hash routing, so private screens are also marked noindex at runtime.)
 Disallow: /sign-in
 Disallow: /sign-up
 Disallow: /reset
+Disallow: /verify
+Disallow: /app
 
-# The signed-in application is not indexable; only the public site is.
-Sitemap: https://kudii.app/sitemap.xml
+Sitemap: https://kudiiofficial.com/sitemap.xml

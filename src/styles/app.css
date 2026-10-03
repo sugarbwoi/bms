@@ -321,7 +321,7 @@
 .pulse-card .ic.in,
 .pulse-card .ic.out,
 .pulse-card .ic.due,
-.pulse-card .ic.jobs {
+.pulse-card .ic.neutral {
   background: var(--tint);
   color: var(--text);
 }

@@ -10,7 +10,6 @@ import {
   TrendingUp,
   TrendingDown,
   Clock,
-  Briefcase,
   ArrowLeftRight,
   ArrowRight,
   Plus,
@@ -40,10 +39,8 @@ import {
   scope,
   saleBalance,
   saleTotal,
-  jobBalance,
   goalProgress,
   salePaymentState,
-  jobPaymentState,
   unifiedTransactions,
 } from '../lib/derive'
 import {
@@ -98,15 +95,6 @@ export default function Dashboard() {
       scope
         .sales(db, businessId)
         .sort((a, b) => new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime())
-        .slice(0, 5),
-    [db, businessId],
-  )
-  const activeJobs = useMemo(
-    () =>
-      scope
-        .jobs(db, businessId)
-        .filter((j) => j.status === 'pending' || j.status === 'in_progress')
-        .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999'))
         .slice(0, 5),
     [db, businessId],
   )
@@ -192,7 +180,7 @@ export default function Dashboard() {
           </div>
 
           <div className="pulse-card">
-            <span className="ic jobs">
+            <span className="ic neutral">
               <ArrowLeftRight size={18} strokeWidth={2.2} />
             </span>
             <div className="v num">{txns.length}</div>
@@ -230,31 +218,25 @@ export default function Dashboard() {
           ) : (
             <div className="stack gap-1">
               {attention.map((item) => {
-                const isJob = item.kind === 'job'
                 const cust = db.customers.find((c) => c.id === item.ref.customer_id)
-                const overdue = isJob && isOverdue((item.ref as any).due_date)
                 return (
                   <button
                     key={`${item.kind}-${item.ref.id}`}
                     className="list-row"
-                    onClick={() => navigate(isJob ? `/jobs/${item.ref.id}` : `/sales/${item.ref.id}`)}
+                    onClick={() => navigate(`/sales/${item.ref.id}`)}
                   >
                     <span className="list-main">
                       <span className="list-title">
-                        {isJob ? (item.ref as any).title : (item.ref as any).sale_number}
+                        {(item.ref as any).sale_number}
                         {cust ? <span className="muted"> · {cust.name}</span> : null}
                       </span>
-                      <span className="list-sub">
-                        {isJob ? 'Job' : 'Sale'}
-                        {isJob && (item.ref as any).due_date ? ` · due ${formatDate((item.ref as any).due_date)}` : ''}
-                        {overdue ? ' · overdue' : ''}
-                      </span>
+                      <span className="list-sub">Sale · unpaid</span>
                     </span>
                     <span className="list-end">
                       <span className="num" style={{ fontWeight: 600, color: 'var(--warning)' }}>
                         {formatMoney(item.balance, currency)}
                       </span>
-                      <Badge tone={overdue ? 'danger' : 'warning'}>{overdue ? 'Overdue' : 'Unpaid'}</Badge>
+                      <Badge tone="warning">Unpaid</Badge>
                     </span>
                   </button>
                 )
@@ -532,8 +514,6 @@ function ActivityIcon({ type }: { type: string }) {
     'sale.created': ShoppingBag,
     'sale.cancelled': ShoppingBag,
     'payment.received': CircleDollarSign,
-    'job.created': Briefcase,
-    'job.completed': CheckCircle2,
     'customer.created': UserPlus,
     'product.created': Package,
     'product.restocked': Package,
@@ -553,7 +533,7 @@ function ActivityIcon({ type }: { type: string }) {
 function Checklist({ onboarding, onDismiss }: { onboarding: any; onDismiss: () => void }) {
   const items = [
     { key: 'first_customer', label: 'Add your first customer', to: 'customer' as const },
-    { key: 'first_sale_or_job', label: 'Record a sale or job', to: 'sale' as const },
+    { key: 'first_sale', label: 'Record your first sale', to: 'sale' as const },
     { key: 'first_transaction', label: 'Record income or an expense', to: 'income' as const },
   ]
   const composer = useComposer()

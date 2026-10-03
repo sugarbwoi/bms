@@ -26,6 +26,7 @@ export interface User {
   email: string
   name: string
   avatar_url: string | null
+  email_verified: boolean
   password_hash: string
   password_salt: string
   created_at: string
@@ -47,6 +48,8 @@ export interface Business {
   id: ID
   name: string
   description: string
+  category: string
+  phone: string
   currency: string
   country: string
   timezone: string
@@ -86,29 +89,11 @@ export interface Product {
   description: string
   selling_price: Minor
   cost_price: Minor
-  sku: string
   stock_quantity: number // server-controlled balance backed by immutable movements
   low_stock_threshold: number
   status: RecordStatus
   created_at: string
   updated_at: string
-}
-
-export type JobStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
-
-export interface Job {
-  id: ID
-  business_id: ID
-  customer_id: ID | null
-  title: string
-  description: string
-  amount: Minor
-  status: JobStatus
-  due_date: string | null
-  notes: string
-  created_at: string
-  updated_at: string
-  completed_at: string | null
 }
 
 export type SaleStatus = 'open' | 'cancelled'
@@ -182,7 +167,6 @@ export interface PaymentAllocation {
   payment_id: ID
   sale_id: ID | null
   invoice_id: ID | null
-  job_id: ID | null
   amount: Minor
 }
 
@@ -223,7 +207,6 @@ export interface InvoiceItem {
   invoice_id: ID
   business_id: ID
   product_id: ID | null
-  job_id: ID | null
   description: string
   quantity: number
   unit_price: Minor
@@ -236,7 +219,6 @@ export interface Receipt {
   customer_id: ID | null
   sale_id: ID | null
   invoice_id: ID | null
-  job_id: ID | null
   payment_id: ID
   receipt_number: string
   amount: Minor
@@ -249,7 +231,6 @@ export interface Activity {
   business_id: ID
   user_id: ID | null
   customer_id: ID | null
-  job_id: ID | null
   transaction_id: ID | null
   type: string
   title: string
@@ -259,7 +240,7 @@ export interface Activity {
 }
 
 export type GoalStatus = 'active' | 'completed' | 'archived'
-export type GoalType = 'revenue' | 'jobs' | 'sales' | 'customers'
+export type GoalType = 'revenue' | 'sales' | 'customers'
 
 export interface Goal {
   id: ID
@@ -274,8 +255,15 @@ export interface Goal {
   updated_at: string
 }
 
-export type PlanId = 'go' | 'plus'
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'cancelled' | 'expired'
+export type PlanId = 'free' | 'go' | 'plus'
+export type SubscriptionStatus =
+  | 'pending' // user chose a plan, payment not yet confirmed
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'failed'
+  | 'cancelled'
+  | 'expired'
 
 export interface Subscription {
   id: ID
@@ -284,9 +272,13 @@ export interface Subscription {
   provider_customer_id: string | null
   provider_subscription_id: string | null
   plan: PlanId
+  /** The plan the user is trying to move to while payment is pending. */
+  pending_plan: PlanId | null
   status: SubscriptionStatus
   current_period_start: string
   current_period_end: string
+  last_payment_reference: string | null
+  last_payment_at: string | null
   created_at: string
   updated_at: string
 }
@@ -295,7 +287,7 @@ export interface OnboardingState {
   business_id: ID
   theme_selected: boolean
   first_customer: boolean
-  first_sale_or_job: boolean
+  first_sale: boolean
   first_transaction: boolean
   completed: boolean
   dismissed: boolean
@@ -307,6 +299,47 @@ export interface Session {
   expiresAt: number | null
 }
 
+/* ------------------------------------------------------------
+   Email + authentication challenges
+   Architecture only — a real email provider is plugged in later.
+   We never claim an email was delivered unless the provider says so.
+   ------------------------------------------------------------ */
+
+export type AuthPurpose = 'sign_in' | 'verify_email' | 'recover'
+
+export type EmailTemplate =
+  | 'login_verification'
+  | 'verification_code'
+  | 'security_notification'
+  | 'recovery'
+
+export type EmailStatus = 'queued' | 'sent' | 'failed'
+
+export interface EmailMessage {
+  id: ID
+  to: string
+  template: EmailTemplate
+  subject: string
+  body: string
+  status: EmailStatus
+  provider: string
+  error: string | null
+  created_at: string
+  sent_at: string | null
+}
+
+export interface AuthChallenge {
+  id: ID
+  email: string
+  purpose: AuthPurpose
+  /** SHA-256 hash of the code — the raw code is never stored. */
+  code_hash: string
+  expires_at: number
+  attempts: number
+  consumed: boolean
+  created_at: string
+}
+
 export interface DB {
   version: number
   users: User[]
@@ -315,7 +348,6 @@ export interface DB {
   memberships: BusinessMembership[]
   customers: Customer[]
   products: Product[]
-  jobs: Job[]
   sales: Sale[]
   saleItems: SaleItem[]
   transactions: Transaction[]
@@ -329,6 +361,8 @@ export interface DB {
   goals: Goal[]
   subscriptions: Subscription[]
   onboarding: OnboardingState[]
+  emails: EmailMessage[]
+  challenges: AuthChallenge[]
   counters: Record<string, number>
   session: Session
 }

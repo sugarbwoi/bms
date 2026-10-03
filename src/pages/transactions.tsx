@@ -10,7 +10,6 @@
      • Expenses     (money spent)
      • Income       (other money in)
      • Drawings     (owner taking money out)
-     • Jobs         (legacy work records — kept so nothing is lost)
 
    Nothing here is a new source of truth. Every row is derived
    from records that already exist elsewhere in the app.
@@ -23,7 +22,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Banknote,
-  Briefcase,
   Plus,
   Search as SearchIcon,
   ReceiptText,
@@ -38,9 +36,12 @@ import { store } from '../lib/store'
 import { navigate } from '../lib/router'
 import { useComposer } from '../components/composer-context'
 import { PageHead } from '../components/shell'
-import { Button, SearchInput, Segmented, StatusBadge, EmptyState, SectionCard } from '../components/ui'
+import { Button, SearchInput, Segmented, StatusBadge, EmptyState, SectionCard, Menu, MenuItem } from '../components/ui'
 import { unifiedTransactions, moneySummary, type Range, type TxnKind } from '../lib/derive'
 import { formatMoney, formatDate, startOfMonth, daysAgo } from '../lib/utils'
+import { downloadCSV, downloadExcel, printTable, shareCSV } from '../lib/export'
+import { useToast } from '../lib/hooks'
+import { Download, FileSpreadsheet, FileText, Share2 } from 'lucide-react'
 
 /* ---------------- range + filters ---------------- */
 type RangeKey = 'month' | '30d' | '90d' | 'all'
@@ -68,7 +69,6 @@ const TYPE_TABS: { value: 'all' | TxnKind; label: string }[] = [
   { value: 'expense', label: 'Expenses' },
   { value: 'income', label: 'Income' },
   { value: 'drawings', label: 'Drawings' },
-  { value: 'job', label: 'Jobs' },
 ]
 
 const KIND_ICON: Record<TxnKind, any> = {
@@ -78,13 +78,13 @@ const KIND_ICON: Record<TxnKind, any> = {
   expense: ArrowUpRight,
   income: ArrowDownLeft,
   drawings: Banknote,
-  job: Briefcase,
 }
 
 export default function Transactions() {
   const db = useDB()
   const biz = store.activeBusiness()
   const composer = useComposer()
+  const toast = useToast()
 
   const businessId = biz?.id || ''
   const currency = biz?.currency || 'NGN'
@@ -114,15 +114,85 @@ export default function Transactions() {
 
   const netPositive = summary.net >= 0
 
+  const exportHeaders = ['Date', 'Type', 'Reference', 'Description', 'Customer', 'Direction', 'Amount', 'Status']
+  const exportRows = () =>
+    filtered.map((r) => [
+      formatDate(r.date),
+      r.kind,
+      r.reference,
+      r.label,
+      r.customer || '',
+      r.direction === 'in' ? 'In' : 'Out',
+      formatMoney(r.amount, currency),
+      r.status,
+    ])
+  const stamp = new Date().toISOString().slice(0, 10)
+  const baseName = `kudii-transactions-${stamp}`
+
+  const doCSV = () => {
+    downloadCSV(`${baseName}.csv`, exportHeaders, exportRows())
+    toast.push('CSV downloaded')
+  }
+  const doExcel = () => {
+    downloadExcel(`${baseName}.xls`, 'Transactions', exportHeaders, exportRows())
+    toast.push('Excel file downloaded')
+  }
+  const doPDF = () => {
+    const ok = printTable(
+      {
+        title: 'Transactions',
+        subtitle: `${rangeKey === 'all' ? 'All time' : RANGE_OPTIONS.find((o) => o.value === rangeKey)?.label}`,
+        business: biz?.name,
+        currency,
+      },
+      exportHeaders,
+      exportRows(),
+    )
+    if (!ok) toast.push('Allow pop-ups to export a PDF', 'error')
+  }
+  const doShare = async () => {
+    const res = await shareCSV(`${baseName}.csv`, 'KUDII transactions', exportHeaders, exportRows())
+    if (!res.ok) toast.push('Could not share that file', 'error')
+    else if (res.shared) toast.push('Shared')
+    else if (!res.cancelled) toast.push('CSV downloaded')
+  }
+
   return (
     <div className="stack gap-6">
       <PageHead
         title="Transactions"
         sub="What happened in your business — sales, payments, refunds and expenses in one place."
         actions={
-          <Button variant="primary" icon={Plus} onClick={() => composer.open('sale')}>
-            New sale
-          </Button>
+          <>
+            <Menu
+              align="right"
+              trigger={({ toggle }) => (
+                <Button variant="soft" icon={Download} onClick={toggle}>
+                  Export
+                </Button>
+              )}
+            >
+              {(close) => (
+                <>
+                  <MenuItem icon={Download} onClick={() => { doCSV(); close() }}>
+                    Download CSV
+                  </MenuItem>
+                  <MenuItem icon={FileSpreadsheet} onClick={() => { doExcel(); close() }}>
+                    Download Excel
+                  </MenuItem>
+                  <MenuItem icon={FileText} onClick={() => { doPDF(); close() }}>
+                    Print / Save as PDF
+                  </MenuItem>
+                  <MenuItem icon={Share2} onClick={() => { doShare(); close() }}>
+                    Share
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+            <Button variant="primary" icon={Plus} onClick={() => composer.open('sale')}>
+              New sale
+            </Button>
+          </>
         }
       />
 
@@ -158,7 +228,7 @@ export default function Transactions() {
           <div className="l">Net for period</div>
         </div>
         <div className="pulse-card">
-          <span className="ic jobs">
+          <span className="ic neutral">
             <ReceiptText size={18} strokeWidth={2.2} />
           </span>
           <div className="v num">{rows.length}</div>

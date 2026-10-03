@@ -1,13 +1,13 @@
 /* ============================================================
    KUDII — Demo seed
    A realistic Nigerian business: Adaeze Fabrics & Tailoring.
-   Demonstrates both product sales and service jobs.
+   Demonstrates products, sales, payments, invoices and money.
    ============================================================ */
 
 import type { DB, ID, Minor } from './types'
 import { emptyDB } from './store'
 import { store } from './store'
-import { uid, nowISO, todayISODate } from './utils'
+import { uid, nowISO } from './utils'
 
 const N = (naira: number): Minor => Math.round(naira * 100)
 
@@ -41,9 +41,10 @@ export async function buildDemoDB(): Promise<DB> {
 
   db.users.push({
     id: USER,
-    email: 'demo@kudii.app',
+    email: 'demo@kudiiofficial.com',
     name: 'Adaeze Okafor',
     avatar_url: null,
+    email_verified: true,
     password_hash: await hashPassword('kudii1234', salt),
     password_salt: salt,
     created_at: daysAgoISO(120),
@@ -63,6 +64,8 @@ export async function buildDemoDB(): Promise<DB> {
     id: BIZ,
     name: 'Adaeze Fabrics & Tailoring',
     description: 'Bespoke tailoring, fabrics and ready-to-wear in Lekki, Lagos.',
+    category: 'Fashion & tailoring',
+    phone: '+2348030000000',
     currency: 'NGN',
     country: 'Nigeria',
     timezone: 'Africa/Lagos',
@@ -87,9 +90,12 @@ export async function buildDemoDB(): Promise<DB> {
     provider_customer_id: null,
     provider_subscription_id: null,
     plan: 'go',
+    pending_plan: null,
     status: 'active',
     current_period_start: daysAgoISO(12),
     current_period_end: daysAgoISO(-18),
+    last_payment_reference: 'DEMO-2024-0001',
+    last_payment_at: daysAgoISO(12),
     created_at: daysAgoISO(120),
     updated_at: now,
   })
@@ -97,7 +103,7 @@ export async function buildDemoDB(): Promise<DB> {
     business_id: BIZ,
     theme_selected: true,
     first_customer: true,
-    first_sale_or_job: true,
+    first_sale: true,
     first_transaction: true,
     completed: true,
     dismissed: true,
@@ -130,17 +136,17 @@ export async function buildDemoDB(): Promise<DB> {
   }
 
   /* ---------------- products ---------------- */
-  const products: { id: ID; name: string; desc: string; sell: number; cost: number; sku: string; stock: number; low: number }[] = [
-    { id: 'prd_1', name: 'Ankara Fabric (6 yards)', desc: 'Premium wax print, 6 yards.', sell: 12000, cost: 7500, sku: 'ANK-6Y', stock: 24, low: 6 },
-    { id: 'prd_2', name: 'Lace Fabric (5 yards)', desc: 'Swiss voile lace.', sell: 28000, cost: 18000, sku: 'LAC-5Y', stock: 8, low: 5 },
-    { id: 'prd_3', name: 'Ready-to-wear Blouse', desc: 'Tailored women\u2019s blouse.', sell: 15000, cost: 8000, sku: 'RTW-BL', stock: 12, low: 4 },
-    { id: 'prd_4', name: 'Agbada Set', desc: 'Three-piece men\u2019s agbada.', sell: 45000, cost: 26000, sku: 'AGB-SET', stock: 5, low: 3 },
-    { id: 'prd_5', name: 'Kaftan (Men)', desc: 'Embroidered kaftan.', sell: 22000, cost: 12000, sku: 'KFT-M', stock: 9, low: 4 },
-    { id: 'prd_6', name: 'Head Wrap (Gele)', desc: 'Hand-finished gele.', sell: 6000, cost: 2500, sku: 'GEL-01', stock: 3, low: 6 },
-    { id: 'prd_7', name: 'Aso-oke (Set)', desc: 'Handwoven aso-oke, 2-piece.', sell: 65000, cost: 42000, sku: 'ASO-SET', stock: 4, low: 2 },
-    { id: 'prd_8', name: 'Sewing Thread (Pack)', desc: 'Assorted colours.', sell: 2500, cost: 1200, sku: 'THR-PK', stock: 2, low: 8 },
-    { id: 'prd_9', name: 'Beaded Clutch', desc: 'Hand-beaded evening clutch.', sell: 18000, cost: 9000, sku: 'CLT-BD', stock: 6, low: 3 },
-    { id: 'prd_10', name: 'Tailored Trousers', desc: 'Slim-fit tailored trousers.', sell: 16000, cost: 8500, sku: 'TRS-01', stock: 11, low: 4 },
+  const products: { id: ID; name: string; desc: string; sell: number; cost: number; stock: number; low: number }[] = [
+    { id: 'prd_1', name: 'Ankara Fabric (6 yards)', desc: 'Premium wax print, 6 yards.', sell: 12000, cost: 7500, stock: 24, low: 6 },
+    { id: 'prd_2', name: 'Lace Fabric (5 yards)', desc: 'Swiss voile lace.', sell: 28000, cost: 18000, stock: 8, low: 5 },
+    { id: 'prd_3', name: 'Ready-to-wear Blouse', desc: 'Tailored women\u2019s blouse.', sell: 15000, cost: 8000, stock: 12, low: 4 },
+    { id: 'prd_4', name: 'Agbada Set', desc: 'Three-piece men\u2019s agbada.', sell: 45000, cost: 26000, stock: 5, low: 3 },
+    { id: 'prd_5', name: 'Kaftan (Men)', desc: 'Embroidered kaftan.', sell: 22000, cost: 12000, stock: 9, low: 4 },
+    { id: 'prd_6', name: 'Head Wrap (Gele)', desc: 'Hand-finished gele.', sell: 6000, cost: 2500, stock: 3, low: 6 },
+    { id: 'prd_7', name: 'Aso-oke (Set)', desc: 'Handwoven aso-oke, 2-piece.', sell: 65000, cost: 42000, stock: 4, low: 2 },
+    { id: 'prd_8', name: 'Sewing Thread (Pack)', desc: 'Assorted colours.', sell: 2500, cost: 1200, stock: 2, low: 8 },
+    { id: 'prd_9', name: 'Beaded Clutch', desc: 'Hand-beaded evening clutch.', sell: 18000, cost: 9000, stock: 6, low: 3 },
+    { id: 'prd_10', name: 'Tailored Trousers', desc: 'Slim-fit tailored trousers.', sell: 16000, cost: 8500, stock: 11, low: 4 },
   ]
   const stockBal: Record<string, number> = {}
   for (const p of products) {
@@ -151,7 +157,6 @@ export async function buildDemoDB(): Promise<DB> {
       description: p.desc,
       selling_price: N(p.sell),
       cost_price: N(p.cost),
-      sku: p.sku,
       stock_quantity: 0,
       low_stock_threshold: p.low,
       status: 'active',
@@ -237,11 +242,10 @@ export async function buildDemoDB(): Promise<DB> {
       business_id: BIZ,
       user_id: USER,
       customer_id: opts.customer,
-      job_id: null,
       transaction_id: null,
       type: 'sale.created',
       title: 'Sale recorded',
-      description: `${sale.sale_number}${opts.customer ? ' · ' + db.customers.find((c) => c.id === opts.customer)!.name : ''}`,
+      description: `${sale.sale_number}${opts.customer ? ' \u00b7 ' + db.customers.find((c) => c.id === opts.customer)!.name : ''}`,
       metadata: { sale_id: saleId, total },
       created_at: when,
     })
@@ -271,7 +275,6 @@ export async function buildDemoDB(): Promise<DB> {
         payment_id: payId,
         sale_id: saleId,
         invoice_id: null,
-        job_id: null,
         amount: allocated,
       })
       db.receipts.push({
@@ -280,7 +283,6 @@ export async function buildDemoDB(): Promise<DB> {
         customer_id: opts.customer,
         sale_id: saleId,
         invoice_id: null,
-        job_id: null,
         payment_id: payId,
         receipt_number: `RCPT-${String(rcptCounter).padStart(4, '0')}`,
         amount,
@@ -292,11 +294,10 @@ export async function buildDemoDB(): Promise<DB> {
         business_id: BIZ,
         user_id: USER,
         customer_id: opts.customer,
-        job_id: null,
         transaction_id: null,
         type: 'payment.received',
         title: 'Payment received',
-        description: `${opts.customer ? db.customers.find((c) => c.id === opts.customer)!.name + ' · ' : ''}RCPT-${String(rcptCounter).padStart(4, '0')}`,
+        description: `${opts.customer ? db.customers.find((c) => c.id === opts.customer)!.name + ' \u00b7 ' : ''}RCPT-${String(rcptCounter).padStart(4, '0')}`,
         metadata: { payment_id: payId, amount },
         created_at: when,
       })
@@ -306,7 +307,7 @@ export async function buildDemoDB(): Promise<DB> {
   addSale({ customer: 'cus_1', date: 2, items: [{ pid: 'prd_1', desc: 'Ankara Fabric (6 yards)', qty: 2, price: 12000 }, { pid: 'prd_6', desc: 'Head Wrap (Gele)', qty: 1, price: 6000 }], paid: 30000, method: 'transfer' })
   addSale({ customer: 'cus_2', date: 4, items: [{ pid: 'prd_4', desc: 'Agbada Set', qty: 1, price: 45000 }], discount: 2000, paid: 43000, method: 'transfer' })
   addSale({ customer: null, date: 6, items: [{ pid: 'prd_3', desc: 'Ready-to-wear Blouse', qty: 1, price: 15000 }], paid: 15000, method: 'cash' })
-  addSale({ customer: 'cus_4', date: 9, items: [{ pid: 'prd_7', desc: 'Aso-oke (Set)', qty: 2, price: 65000 }, { pid: 'prd_9', desc: 'Beaded Clutch', qty: 2, price: 18000 }], discount: 6000, paid: 100000, method: 'transfer', notes: 'Wedding order — balance on delivery.' })
+  addSale({ customer: 'cus_4', date: 9, items: [{ pid: 'prd_7', desc: 'Aso-oke (Set)', qty: 2, price: 65000 }, { pid: 'prd_9', desc: 'Beaded Clutch', qty: 2, price: 18000 }], discount: 6000, paid: 100000, method: 'transfer', notes: 'Wedding order \u2014 balance on delivery.' })
   addSale({ customer: 'cus_5', date: 13, items: [{ pid: 'prd_2', desc: 'Lace Fabric (5 yards)', qty: 1, price: 28000 }], paid: 28000, method: 'card' })
   addSale({ customer: 'cus_3', date: 17, items: [{ pid: 'prd_5', desc: 'Kaftan (Men)', qty: 2, price: 22000 }, { pid: 'prd_10', desc: 'Tailored Trousers', qty: 1, price: 16000 }], paid: 30000, method: 'transfer' })
   addSale({ customer: 'cus_6', date: 22, items: [{ pid: 'prd_1', desc: 'Ankara Fabric (6 yards)', qty: 3, price: 12000 }], discount: 1000, paid: 35000, method: 'cash' })
@@ -314,108 +315,9 @@ export async function buildDemoDB(): Promise<DB> {
   addSale({ customer: 'cus_8', date: 33, items: [{ pid: 'prd_3', desc: 'Ready-to-wear Blouse', qty: 2, price: 15000 }], paid: 30000, method: 'transfer' })
   addSale({ customer: 'cus_2', date: 40, items: [{ pid: 'prd_4', desc: 'Agbada Set', qty: 2, price: 45000 }], discount: 5000, paid: 85000, method: 'transfer' })
 
-  /* ---------------- jobs ---------------- */
-  const jobs: { id: ID; customer: ID; title: string; desc: string; amount: number; status: any; due: number | null; created: number; completed?: number; paid: number; method: string }[] = [
-    { id: 'job_1', customer: 'cus_1', title: 'Bespoke wedding gown', desc: 'Custom bridal gown with beaded bodice.', amount: 350000, status: 'in_progress', due: 10, created: 25, paid: 150000, method: 'transfer' },
-    { id: 'job_2', customer: 'cus_2', title: 'Corporate uniform set', desc: '20 staff kaftans with logo embroidery.', amount: 480000, status: 'in_progress', due: 6, created: 20, paid: 240000, method: 'transfer' },
-    { id: 'job_3', customer: 'cus_4', title: 'Wedding party aso-ebi', desc: '12 coordinated outfits for bridal party.', amount: 720000, status: 'pending', due: 21, created: 12, paid: 200000, method: 'transfer' },
-    { id: 'job_4', customer: 'cus_5', title: 'Blouse alterations', desc: 'Resize and restyle 4 blouses.', amount: 24000, status: 'completed', due: -3, created: 15, completed: 3, paid: 24000, method: 'cash' },
-    { id: 'job_5', customer: 'cus_3', title: 'Kaftan embroidery', desc: 'Hand embroidery on 3 kaftans.', amount: 45000, status: 'completed', due: -6, created: 18, completed: 6, paid: 45000, method: 'transfer' },
-    { id: 'job_6', customer: 'cus_6', title: 'Aso-oke weaving', desc: 'Custom aso-oke for engagement.', amount: 180000, status: 'pending', due: 14, created: 8, paid: 60000, method: 'transfer' },
-    { id: 'job_7', customer: 'cus_7', title: 'Gele styling session', desc: 'On-site gele styling for event.', amount: 35000, status: 'completed', due: -1, created: 5, completed: 1, paid: 35000, method: 'cash' },
-  ]
-  let jobPay = 200
-  for (const j of jobs) {
-    const when = daysAgoISO(j.created)
-    db.jobs.push({
-      id: j.id,
-      business_id: BIZ,
-      customer_id: j.customer,
-      title: j.title,
-      description: j.desc,
-      amount: N(j.amount),
-      status: j.status,
-      due_date: j.due != null ? dateOnly(j.due) : null,
-      notes: '',
-      created_at: when,
-      updated_at: j.completed != null ? daysAgoISO(j.completed) : when,
-      completed_at: j.completed != null ? daysAgoISO(j.completed) : null,
-    })
-    db.activities.push({
-      id: uid('act'),
-      business_id: BIZ,
-      user_id: USER,
-      customer_id: j.customer,
-      job_id: j.id,
-      transaction_id: null,
-      type: 'job.created',
-      title: 'Job created',
-      description: `${j.title} · ${db.customers.find((c) => c.id === j.customer)!.name}`,
-      metadata: { job_id: j.id },
-      created_at: when,
-    })
-    if (j.completed != null) {
-      db.activities.push({
-        id: uid('act'),
-        business_id: BIZ,
-        user_id: USER,
-        customer_id: j.customer,
-        job_id: j.id,
-        transaction_id: null,
-        type: 'job.completed',
-        title: 'Job completed',
-        description: j.title,
-        metadata: { job_id: j.id },
-        created_at: daysAgoISO(j.completed),
-      })
-    }
-    if (j.paid > 0) {
-      jobPay++
-      rcptCounter++
-      const payId = `pay_${jobPay}`
-      const amount = N(j.paid)
-      db.payments.push({
-        id: payId,
-        business_id: BIZ,
-        customer_id: j.customer,
-        amount,
-        currency: 'NGN',
-        method: j.method,
-        reference: `PAY-${String(jobPay).padStart(4, '0')}`,
-        payment_date: dateOnly(j.created - 1),
-        notes: `Deposit for ${j.title}`,
-        status: 'posted',
-        created_at: daysAgoISO(j.created - 1),
-        updated_at: daysAgoISO(j.created - 1),
-      })
-      db.allocations.push({
-        id: uid('alc'),
-        business_id: BIZ,
-        payment_id: payId,
-        sale_id: null,
-        invoice_id: null,
-        job_id: j.id,
-        amount,
-      })
-      db.receipts.push({
-        id: uid('rcp'),
-        business_id: BIZ,
-        customer_id: j.customer,
-        sale_id: null,
-        invoice_id: null,
-        job_id: j.id,
-        payment_id: payId,
-        receipt_number: `RCPT-${String(rcptCounter).padStart(4, '0')}`,
-        amount,
-        payment_method: j.method,
-        issued_at: daysAgoISO(j.created - 1),
-      })
-    }
-  }
-
   /* ---------------- expenses / drawings / income ---------------- */
   const txns: { type: any; cat: string; amount: number; desc: string; date: number; method: string }[] = [
-    { type: 'expense', cat: 'Rent', amount: 150000, desc: 'Shop rent — monthly', date: 30, method: 'transfer' },
+    { type: 'expense', cat: 'Rent', amount: 150000, desc: 'Shop rent \u2014 monthly', date: 30, method: 'transfer' },
     { type: 'expense', cat: 'Materials', amount: 85000, desc: 'Fabric restock from Balogun market', date: 26, method: 'cash' },
     { type: 'expense', cat: 'Utilities', amount: 22000, desc: 'Electricity & water', date: 24, method: 'transfer' },
     { type: 'expense', cat: 'Salaries', amount: 120000, desc: 'Tailor assistant wages', date: 22, method: 'transfer' },
@@ -425,8 +327,8 @@ export async function buildDemoDB(): Promise<DB> {
     { type: 'expense', cat: 'Utilities', amount: 20000, desc: 'Generator fuel', date: 5, method: 'cash' },
     { type: 'drawings', cat: 'Personal', amount: 90000, desc: 'Owner withdrawal', date: 20, method: 'transfer' },
     { type: 'drawings', cat: 'Personal', amount: 60000, desc: 'Owner withdrawal', date: 6, method: 'transfer' },
-    { type: 'income', cat: 'Consultation', amount: 40000, desc: 'Styling consultation — private client', date: 3, method: 'transfer' },
-    { type: 'expense', cat: 'Rent', amount: 150000, desc: 'Shop rent — previous month', date: 58, method: 'transfer' },
+    { type: 'income', cat: 'Consultation', amount: 40000, desc: 'Styling consultation \u2014 private client', date: 3, method: 'transfer' },
+    { type: 'expense', cat: 'Rent', amount: 150000, desc: 'Shop rent \u2014 previous month', date: 58, method: 'transfer' },
     { type: 'expense', cat: 'Salaries', amount: 120000, desc: 'Tailor assistant wages', date: 52, method: 'transfer' },
     { type: 'income', cat: 'Consultation', amount: 25000, desc: 'Wardrobe consultation', date: 47, method: 'cash' },
     { type: 'expense', cat: 'Materials', amount: 70000, desc: 'Fabric restock', date: 44, method: 'cash' },
@@ -455,11 +357,10 @@ export async function buildDemoDB(): Promise<DB> {
       business_id: BIZ,
       user_id: USER,
       customer_id: null,
-      job_id: null,
       transaction_id: null,
       type: `${t.type}.recorded`,
       title: t.type === 'expense' ? 'Expense recorded' : t.type === 'drawings' ? 'Drawing recorded' : 'Income recorded',
-      description: `${t.cat} · ${t.desc}`,
+      description: `${t.cat} \u00b7 ${t.desc}`,
       metadata: { amount: N(t.amount) },
       created_at: daysAgoISO(t.date),
     })
@@ -491,7 +392,6 @@ export async function buildDemoDB(): Promise<DB> {
         invoice_id: invId,
         business_id: BIZ,
         product_id: null,
-        job_id: null,
         description: it.desc,
         quantity: it.qty,
         unit_price: N(it.price),
@@ -504,7 +404,6 @@ export async function buildDemoDB(): Promise<DB> {
         business_id: BIZ,
         user_id: USER,
         customer_id: customer,
-        job_id: null,
         transaction_id: null,
         type: 'invoice.issued',
         title: 'Invoice issued',
@@ -535,8 +434,8 @@ export async function buildDemoDB(): Promise<DB> {
   db.goals.push({
     id: uid('goal'),
     business_id: BIZ,
-    type: 'jobs',
-    title: 'Complete 12 jobs this quarter',
+    type: 'sales',
+    title: 'Complete 12 sales this quarter',
     target_amount: 12,
     start_date: daysAgoISO(30),
     end_date: daysAgoISO(-60),
@@ -546,7 +445,7 @@ export async function buildDemoDB(): Promise<DB> {
   })
 
   db.counters[`${BIZ}:SALE`] = saleCounter
-  db.counters[`${BIZ}:PAY`] = jobPay
+  db.counters[`${BIZ}:PAY`] = payCounter
   db.counters[`${BIZ}:RCPT`] = rcptCounter
   db.counters[`${BIZ}:INV`] = invCounter
 

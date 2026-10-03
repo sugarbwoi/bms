@@ -7,6 +7,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { useDB, useApplyTheme } from './lib/hooks'
 import { useRoute, navigate } from './lib/router'
 import { store } from './lib/store'
+import { applyHead } from './lib/seo'
 import { AppShell } from './components/shell'
 import { Skeleton } from './components/ui'
 import type { ThemeName } from './lib/types'
@@ -19,7 +20,6 @@ const Dashboard = lazy(() => import('./pages/dashboard'))
 const Customers = lazy(() => import('./pages/customers'))
 const Products = lazy(() => import('./pages/products'))
 const Sales = lazy(() => import('./pages/sales'))
-const Jobs = lazy(() => import('./pages/jobs'))
 const Transactions = lazy(() => import('./pages/transactions'))
 const Money = lazy(() => import('./pages/money'))
 const Invoices = lazy(() => import('./pages/invoices'))
@@ -65,6 +65,12 @@ export default function App() {
       ? 'dark'
       : 'light'
   useApplyTheme(settings?.theme || biz?.theme || systemTheme, settings?.reduce_effects)
+
+  /* Keep the document head in sync: public pages stay indexable, every
+     authenticated screen is marked noindex so private data is never crawled. */
+  useEffect(() => {
+    applyHead(path, !!user)
+  }, [path, user])
 
   /* Guard: send signed-in users away from auth/marketing entry points,
      and send signed-out users to sign-in when they hit the app. */
@@ -134,7 +140,9 @@ function AppRoutes() {
     case 'sales':
       return <Sales id={segments[1]} />
     case 'jobs':
-      return <Jobs id={segments[1]} />
+      // Legacy route — Jobs has been retired. Send visitors to Sales.
+      navigate('/sales', { replace: true })
+      return <Sales />
     case 'transactions':
       return <Transactions />
     case 'money':

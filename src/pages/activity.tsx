@@ -8,7 +8,6 @@ import {
   Activity as ActivityIcon,
   Search as SearchIcon,
   ShoppingCart,
-  Briefcase,
   CircleDollarSign,
   FileText,
   Package,
@@ -28,13 +27,12 @@ import { scope } from '../lib/derive'
 import { formatDateTime, timeAgo, startOfDay, daysAgo } from '../lib/utils'
 import type { Activity as ActivityRow } from '../lib/types'
 
-type Filter = 'all' | 'money' | 'sales' | 'jobs' | 'invoices' | 'products' | 'customers' | 'other'
+type Filter = 'all' | 'money' | 'sales' | 'invoices' | 'products' | 'customers' | 'other'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'money', label: 'Money' },
   { value: 'sales', label: 'Sales' },
-  { value: 'jobs', label: 'Jobs' },
   { value: 'invoices', label: 'Invoices' },
   { value: 'products', label: 'Products' },
   { value: 'customers', label: 'Customers' },
@@ -56,7 +54,6 @@ function matchesFilter(type: string, f: Filter): boolean {
   if (f === 'all') return true
   if (f === 'money') return type.startsWith('payment') || type.startsWith('income') || type.startsWith('expense') || type.startsWith('drawings') || type.startsWith('refund') || type.startsWith('reversal')
   if (f === 'sales') return type.startsWith('sale')
-  if (f === 'jobs') return type.startsWith('job')
   if (f === 'invoices') return type.startsWith('invoice')
   if (f === 'products') return type.startsWith('product') || type.startsWith('stock')
   if (f === 'customers') return type.startsWith('customer')
@@ -66,7 +63,6 @@ function matchesFilter(type: string, f: Filter): boolean {
 function iconFor(type: string) {
   if (type.startsWith('sale.created')) return ShoppingCart
   if (type.startsWith('sale.cancelled')) return Ban
-  if (type.startsWith('job')) return Briefcase
   if (type.startsWith('payment')) return CircleDollarSign
   if (type.startsWith('invoice')) return FileText
   if (type.startsWith('product') || type.startsWith('stock')) return Package
@@ -135,7 +131,7 @@ export default function Activity() {
             message={
               query || filter !== 'all'
                 ? 'Try a different filter or search term.'
-                : 'As you record sales, jobs, payments, and expenses, everything shows up here automatically.'
+                : 'As you record sales, payments, and expenses, everything shows up here automatically.'
             }
           />
         </SectionCard>

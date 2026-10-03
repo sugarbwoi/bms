@@ -10,21 +10,18 @@ import type {
   Minor,
   Sale,
   SaleItem,
-  Job,
   Invoice,
   InvoiceItem,
   Product,
-  Payment,
   PlanId,
 } from './types'
 import { PLANS } from './plans'
-import { startOfMonth, sum, daysAgo } from './utils'
+import { startOfMonth, sum } from './utils'
 
 /* ---------------- scoped accessors ---------------- */
 export const scope = {
   customers: (db: DB, b: ID) => db.customers.filter((x) => x.business_id === b),
   products: (db: DB, b: ID) => db.products.filter((x) => x.business_id === b),
-  jobs: (db: DB, b: ID) => db.jobs.filter((x) => x.business_id === b),
   sales: (db: DB, b: ID) => db.sales.filter((x) => x.business_id === b),
   saleItems: (db: DB, b: ID) => db.saleItems.filter((x) => x.business_id === b),
   transactions: (db: DB, b: ID) => db.transactions.filter((x) => x.business_id === b),
@@ -69,20 +66,6 @@ export function salePaymentState(db: DB, sale: Sale): PaymentState {
   return paymentState(saleTotal(db, sale), salePaid(db, sale.id))
 }
 
-/* ---------------- Job maths ---------------- */
-export function jobPaid(db: DB, jobId: ID): Minor {
-  return sum(
-    db.allocations.filter((a) => a.job_id === jobId),
-    (a) => a.amount,
-  )
-}
-export function jobBalance(db: DB, job: Job): Minor {
-  return Math.max(0, job.amount - jobPaid(db, job.id))
-}
-export function jobPaymentState(db: DB, job: Job): PaymentState {
-  return paymentState(job.amount, jobPaid(db, job.id))
-}
-
 /* ---------------- Invoice maths ---------------- */
 export function invoiceItems(db: DB, invoiceId: ID): InvoiceItem[] {
   return db.invoiceItems.filter((i) => i.invoice_id === invoiceId)
@@ -115,25 +98,19 @@ export function invoiceEffectiveStatus(db: DB, invoice: Invoice): Invoice['statu
 /* ---------------- Customer maths ---------------- */
 export interface CustomerBalance {
   sales: Minor
-  jobs: Minor
   invoices: Minor
   total: Minor
   paid: Minor
 }
 export function customerBalance(db: DB, customerId: ID): CustomerBalance {
   const s = db.sales.filter((x) => x.customer_id === customerId && x.status !== 'cancelled')
-  const j = db.jobs.filter((x) => x.customer_id === customerId && x.status !== 'cancelled')
   const inv = db.invoices.filter(
     (x) => x.customer_id === customerId && x.status !== 'cancelled' && x.status !== 'draft',
   )
   const salesBal = sum(s, (x) => Math.max(0, saleBalance(db, x)))
-  const jobsBal = sum(j, (x) => Math.max(0, jobBalance(db, x)))
   const invBal = sum(inv, (x) => invoiceBalance(db, x))
-  const paid =
-    sum(s, (x) => salePaid(db, x.id)) +
-    sum(j, (x) => jobPaid(db, x.id)) +
-    sum(inv, (x) => invoicePaid(db, x.id))
-  return { sales: salesBal, jobs: jobsBal, invoices: invBal, total: salesBal + jobsBal + invBal, paid }
+  const paid = sum(s, (x) => salePaid(db, x.id)) + sum(inv, (x) => invoicePaid(db, x.id))
+  return { sales: salesBal, invoices: invBal, total: salesBal + invBal, paid }
 }
 
 /* ---------------- Inventory ---------------- */
@@ -194,14 +171,12 @@ export function moneySummary(db: DB, businessId: ID, range: Range): MoneySummary
 /* ---------------- Outstanding ---------------- */
 export interface Outstanding {
   sales: Minor
-  jobs: Minor
   invoices: Minor
   total: Minor
   count: number
 }
 export function outstanding(db: DB, businessId: ID): Outstanding {
   const sales = scope.sales(db, businessId).filter((s) => s.status !== 'cancelled')
-  const jobs = scope.jobs(db, businessId).filter((j) => j.status !== 'cancelled')
   const invs = scope
     .invoices(db, businessId)
     .filter((i) => i.status !== 'cancelled' && i.status !== 'draft')
@@ -212,17 +187,12 @@ export function outstanding(db: DB, businessId: ID): Outstanding {
     if (b > 0) count++
     return b
   })
-  const jobsBal = sum(jobs, (j) => {
-    const b = Math.max(0, jobBalance(db, j))
-    if (b > 0) count++
-    return b
-  })
   const invBal = sum(invs, (i) => {
     const b = invoiceBalance(db, i)
     if (b > 0) count++
     return b
   })
-  return { sales: salesBal, jobs: jobsBal, invoices: invBal, total: salesBal + jobsBal + invBal, count }
+  return { sales: salesBal, invoices: invBal, total: salesBal + invBal, count }
 }
 
 /* ---------------- Dashboard Pulse ---------------- */
@@ -230,7 +200,6 @@ export interface Pulse {
   moneyIn: Minor
   moneyOut: Minor
   outstanding: Minor
-  activeJobs: number
   moneyInDelta: number // % vs previous period
   moneyOutDelta: number
   newCustomers: number
@@ -248,9 +217,6 @@ export function pulse(db: DB, businessId: ID, range: Range): Pulse {
   const cur = moneySummary(db, businessId, range)
   const prev = moneySummary(db, businessId, prevRange(range))
   const out = outstanding(db, businessId)
-  const activeJobs = scope
-    .jobs(db, businessId)
-    .filter((j) => j.status === 'pending' || j.status === 'in_progress').length
   const newCustomers = scope.customers(db, businessId).filter((c) => inRange(c.created_at, range)).length
   const salesCount = scope.sales(db, businessId).filter((s) => inRange(s.sale_date, range)).length
   const delta = (a: number, b: number) => (b <= 0 ? (a > 0 ? 100 : 0) : Math.round(((a - b) / b) * 100))
@@ -258,7 +224,6 @@ export function pulse(db: DB, businessId: ID, range: Range): Pulse {
     moneyIn: cur.moneyIn,
     moneyOut: cur.moneyOut,
     outstanding: out.total,
-    activeJobs,
     moneyInDelta: delta(cur.moneyIn, prev.moneyIn),
     moneyOutDelta: delta(cur.moneyOut, prev.moneyOut),
     newCustomers,
@@ -268,8 +233,6 @@ export function pulse(db: DB, businessId: ID, range: Range): Pulse {
 
 /* ---------------- Progress ---------------- */
 export interface ProgressMetrics {
-  jobsCompleted: number
-  jobsActive: number
   revenueReceived: Minor
   outstanding: Minor
   salesCount: number
@@ -280,7 +243,6 @@ export interface ProgressMetrics {
 }
 
 export function progress(db: DB, businessId: ID, range: Range): ProgressMetrics {
-  const jobs = scope.jobs(db, businessId)
   const sales = scope.sales(db, businessId).filter((s) => s.status !== 'cancelled')
   const money = moneySummary(db, businessId, range)
 
@@ -315,8 +277,6 @@ export function progress(db: DB, businessId: ID, range: Range): ProgressMetrics 
   }
 
   return {
-    jobsCompleted: jobs.filter((j) => j.status === 'completed').length,
-    jobsActive: jobs.filter((j) => j.status === 'pending' || j.status === 'in_progress').length,
     revenueReceived: money.moneyIn,
     outstanding: outstanding(db, businessId).total,
     salesCount: sales.filter((s) => inRange(s.sale_date, range)).length,
@@ -333,10 +293,6 @@ export function goalProgress(db: DB, goal: { type: string; target_amount: Minor;
   let current = 0
   if (goal.type === 'revenue') {
     current = moneySummary(db, db.session.activeBusinessId || '', range).moneyIn
-  } else if (goal.type === 'jobs') {
-    current = scope
-      .jobs(db, db.session.activeBusinessId || '')
-      .filter((j) => j.status === 'completed' && inRange(j.completed_at || j.updated_at, range)).length
   } else if (goal.type === 'sales') {
     current = scope.sales(db, db.session.activeBusinessId || '').filter((s) => inRange(s.sale_date, range)).length
   } else if (goal.type === 'customers') {
@@ -350,7 +306,6 @@ export function goalProgress(db: DB, goal: { type: string; target_amount: Minor;
 export interface Usage {
   products: number
   customers: number
-  active_jobs: number
   transactions_this_month: number
   businesses: number
 }
@@ -365,9 +320,6 @@ export function usage(db: DB, businessId: ID, userId: ID): Usage {
   return {
     products: scope.products(db, businessId).filter((p) => p.status === 'active').length,
     customers: scope.customers(db, businessId).filter((c) => c.status === 'active').length,
-    active_jobs: scope
-      .jobs(db, businessId)
-      .filter((j) => j.status === 'pending' || j.status === 'in_progress').length,
     transactions_this_month: txns.length + pays.length,
     businesses: db.memberships.filter((m) => m.user_id === userId && m.status === 'active').length,
   }
@@ -383,13 +335,9 @@ export type BusinessFlavor = 'product' | 'service' | 'mixed'
 export function businessFlavor(db: DB, businessId: ID): BusinessFlavor {
   const products = scope.products(db, businessId).length
   const sales = scope.sales(db, businessId).length
-  const jobs = scope.jobs(db, businessId).length
   const productScore = products + sales * 2
-  const serviceScore = jobs * 2
-  if (productScore === 0 && serviceScore === 0) return 'mixed'
-  if (productScore > serviceScore * 1.3) return 'product'
-  if (serviceScore > productScore * 1.3) return 'service'
-  return 'mixed'
+  if (productScore === 0) return 'mixed'
+  return 'product'
 }
 
 /* ---------------- Recent helpers ---------------- */
@@ -414,24 +362,18 @@ export function todayActivity(db: DB, businessId: ID) {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 }
 export function outstandingWork(db: DB, businessId: ID) {
-  const jobs = scope
-    .jobs(db, businessId)
-    .filter((j) => j.status === 'pending' || j.status === 'in_progress')
-    .map((j) => ({ kind: 'job' as const, ref: j, balance: jobBalance(db, j), due: j.due_date }))
   const sales = scope
     .sales(db, businessId)
     .filter((s) => s.status !== 'cancelled' && saleBalance(db, s) > 0)
     .map((s) => ({ kind: 'sale' as const, ref: s, balance: saleBalance(db, s), due: null as string | null }))
-  return [...jobs, ...sales]
-    .sort((a, b) => b.balance - a.balance)
-    .slice(0, 6)
+  return [...sales].sort((a, b) => b.balance - a.balance).slice(0, 6)
 }
 
 /* ---------------- Unified transactions feed ----------------
    One derived list that answers "what happened in my business?".
    It never stores anything new — every row points back to a
-   record that already exists (sale, payment, transaction, job). */
-export type TxnKind = 'sale' | 'payment' | 'refund' | 'expense' | 'income' | 'drawings' | 'job'
+   record that already exists (sale, payment, transaction). */
+export type TxnKind = 'sale' | 'payment' | 'refund' | 'expense' | 'income' | 'drawings'
 
 export interface UnifiedTxn {
   id: ID
@@ -528,31 +470,20 @@ export function unifiedTransactions(db: DB, businessId: ID, range?: Range): Unif
     })
   }
 
-  // Legacy jobs — kept visible so nothing is hidden or lost
-  for (const j of scope.jobs(db, businessId)) {
-    if (!inR(j.created_at)) continue
-    out.push({
-      id: j.id,
-      kind: 'job',
-      direction: 'in',
-      label: 'Job',
-      reference: j.title,
-      customer: custName(j.customer_id) || 'No customer',
-      amount: j.amount,
-      status: j.status,
-      date: j.created_at,
-      href: `/jobs/${j.id}`,
-    })
-  }
-
   out.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   return out
 }
 
+/* ---------------- Plan resolution ----------------
+   A business only counts as a paid plan while its subscription is
+   genuinely active or trialing. Pending / failed / expired / cancelled
+   fall back to Free — data is never deleted, but paid features stay
+   locked until payment is confirmed. */
 export function planOf(db: DB, businessId: ID): PlanId {
   const sub = db.subscriptions.find((s) => s.business_id === businessId)
-  if (!sub) return 'go'
-  if (sub.status === 'expired' || sub.status === 'cancelled') return 'go'
+  if (!sub) return 'free'
+  if (sub.status === 'expired' || sub.status === 'cancelled' || sub.status === 'failed') return 'free'
+  // active / trialing / past_due / pending keep the last confirmed plan.
   return sub.plan
 }
 export function planLimitsOf(db: DB, businessId: ID) {

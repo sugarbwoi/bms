@@ -862,6 +862,59 @@ table.tbl .right {
   text-align: right;
 }
 
+/* On small screens, wide tables become stacked cards so nothing is cut off
+   and the page never scrolls sideways. Each cell shows its column label. */
+@media (max-width: 640px) {
+  .table-wrap {
+    overflow-x: visible;
+  }
+  table.tbl thead {
+    display: none;
+  }
+  table.tbl,
+  table.tbl tbody,
+  table.tbl tr,
+  table.tbl td {
+    display: block;
+    width: 100%;
+  }
+  table.tbl tr {
+    background: var(--glass-soft);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    padding: var(--s-3) var(--s-4);
+    margin-bottom: var(--s-3);
+  }
+  table.tbl tr:last-child {
+    margin-bottom: 0;
+  }
+  table.tbl td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+    text-align: right;
+  }
+  table.tbl tr td:last-child {
+    border-bottom: none;
+  }
+  table.tbl td::before {
+    content: attr(data-label);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-3);
+    text-align: left;
+    flex: none;
+  }
+  table.tbl td:not([data-label])::before {
+    content: '';
+  }
+}
+
 /* ---------- Toggle ---------- */
 .toggle {
   width: 46px;

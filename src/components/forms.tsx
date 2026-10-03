@@ -2,8 +2,9 @@
    KUDII — Forms / Composers
    ============================================================ */
 import { useMemo, useState } from 'react'
-import { Plus, Trash2, UserPlus, Package, Briefcase, Wallet, TrendingDown, PiggyBank, Receipt, FileText, HandCoins } from 'lucide-react'
+import { Plus, Trash2, UserPlus, Package, Wallet, TrendingDown, PiggyBank, Receipt, FileText, HandCoins, ArrowUpRight } from 'lucide-react'
 import { store } from '../lib/store'
+import { navigate } from '../lib/router'
 import { useDB, useToast } from '../lib/hooks'
 import {
   Modal,
@@ -17,8 +18,8 @@ import {
   Avatar,
 } from './ui'
 import { parseAmount, currencySymbol, formatMoney, todayISODate, toMinor, uid } from '../lib/utils'
-import { saleBalance, jobBalance, invoiceBalance, invoiceTotal, saleTotal } from '../lib/derive'
-import type { Minor, JobStatus, GoalType } from '../lib/types'
+import { saleBalance, invoiceBalance, invoiceTotal, saleTotal } from '../lib/derive'
+import type { Minor, GoalType } from '../lib/types'
 import type { ComposerParams } from './composer-context'
 
 const METHODS = [
@@ -31,6 +32,20 @@ const METHODS = [
 ]
 const INCOME_CATS = ['Sales', 'Consultation', 'Service', 'Delivery', 'Interest', 'Other']
 const EXPENSE_CATS = ['Materials', 'Rent', 'Salaries', 'Utilities', 'Transport', 'Marketing', 'Equipment', 'Repairs', 'Other']
+const BUSINESS_CATEGORIES = [
+  'Retail & Shop',
+  'Food & Beverage',
+  'Fashion & Apparel',
+  'Electronics',
+  'Beauty & Personal Care',
+  'Services',
+  'Wholesale & Distribution',
+  'Pharmacy & Health',
+  'Agriculture',
+  'Construction',
+  'Professional Services',
+  'Other',
+]
 
 function AmountInput({
   value,
@@ -229,15 +244,16 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
   const [description, setDescription] = useState(existing?.description || '')
   const [selling, setSelling] = useState(existing ? String(existing.selling_price / 100) : '')
   const [cost, setCost] = useState(existing ? String(existing.cost_price / 100) : '')
-  const [sku, setSku] = useState(existing?.sku || '')
   const [opening, setOpening] = useState('')
   const [low, setLow] = useState(existing ? String(existing.low_stock_threshold) : '5')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [err, setErr] = useState('')
+  const [needsUpgrade, setNeedsUpgrade] = useState(false)
 
   const save = () => {
     setErrors({})
     setErr('')
+    setNeedsUpgrade(false)
     const sellingMinor = parseAmount(selling, biz.currency)
     const costMinor = parseAmount(cost, biz.currency) || 0
     if (existing) {
@@ -246,7 +262,6 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
         description,
         selling_price: sellingMinor || 0,
         cost_price: costMinor,
-        sku,
         low_stock_threshold: Number(low) || 0,
       })
       if (!res.ok) {
@@ -262,13 +277,14 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
         description,
         selling_price: sellingMinor || 0,
         cost_price: costMinor,
-        sku,
         low_stock_threshold: Number(low) || 0,
         stock_quantity: Number(opening) || 0,
       })
       if (!res.ok) {
         setErrors(res.fieldErrors || {})
-        setErr(res.error || '')
+        const msg = res.error || ''
+        if (/limit|upgrade/i.test(msg)) setNeedsUpgrade(true)
+        setErr(msg)
         return
       }
       toast.push('Product added')
@@ -294,6 +310,22 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
       }
     >
       {err && <ErrorBanner>{err}</ErrorBanner>}
+      {needsUpgrade && (
+        <div className="row-between mt-3" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <span className="text-sm muted">Add more products on a bigger plan.</span>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ArrowUpRight}
+            onClick={() => {
+              onClose()
+              navigate('/settings?tab=plan')
+            }}
+          >
+            See plans
+          </Button>
+        </div>
+      )}
       <div className="stack gap-4 mt-2">
         <Field label="Product name" required error={errors.name}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ankara Fabric (6 yards)" autoFocus invalid={!!errors.name} />
@@ -309,14 +341,9 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
             <AmountInput value={cost} onChange={setCost} currency={biz.currency} />
           </Field>
         </div>
-        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
-          <Field label="SKU / code">
-            <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Optional" />
-          </Field>
-          <Field label="Low-stock alert at">
-            <Input type="number" min="0" value={low} onChange={(e) => setLow(e.target.value)} />
-          </Field>
-        </div>
+        <Field label="Low-stock alert at" hint="KUDII flags this product when stock falls to this level.">
+          <Input type="number" min="0" value={low} onChange={(e) => setLow(e.target.value)} />
+        </Field>
         {!existing && (
           <Field label="Opening stock" hint="Optional. Creates a restock movement.">
             <Input type="number" min="0" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="0" />
@@ -551,126 +578,6 @@ export function SaleComposer({ params, onClose, onDone }: { params: ComposerPara
 }
 
 /* ============================================================
-   JOB
-   ============================================================ */
-export function JobForm({ params, onClose, onDone }: { params: ComposerParams; onClose: () => void; onDone: (result?: any) => void }) {
-  const db = useDB()
-  const biz = store.activeBusiness()!
-  const toast = useToast()
-  const existing = params.id ? db.jobs.find((j) => j.id === params.id) : null
-  const customers = db.customers.filter((c) => c.business_id === biz.id && c.status === 'active')
-
-  const [customerId, setCustomerId] = useState(existing?.customer_id || params.customer_id || '')
-  const [title, setTitle] = useState(existing?.title || '')
-  const [description, setDescription] = useState(existing?.description || '')
-  const [amount, setAmount] = useState(existing ? String(existing.amount / 100) : '')
-  const [status, setStatus] = useState<JobStatus>(existing?.status || 'pending')
-  const [due, setDue] = useState(existing?.due_date || '')
-  const [notes, setNotes] = useState(existing?.notes || '')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [err, setErr] = useState('')
-
-  const save = () => {
-    setErrors({})
-    setErr('')
-    const amountMinor = parseAmount(amount, biz.currency) || 0
-    if (existing) {
-      const res = store.updateJob(existing.id, {
-        customer_id: customerId || null,
-        title,
-        description,
-        amount: amountMinor,
-        due_date: due || null,
-        notes,
-      })
-      if (!res.ok) {
-        setErrors(res.fieldErrors || {})
-        setErr(res.error || '')
-        return
-      }
-      if (status !== existing.status) store.setJobStatus(existing.id, status)
-      toast.push('Job updated')
-      onDone(res.data)
-    } else {
-      const res = store.createJob({
-        customer_id: customerId || null,
-        title,
-        description,
-        amount: amountMinor,
-        status,
-        due_date: due || null,
-        notes,
-      })
-      if (!res.ok) {
-        setErrors(res.fieldErrors || {})
-        setErr(res.error || '')
-        return
-      }
-      toast.push('Job created')
-      onDone(res.data)
-    }
-  }
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={existing ? 'Edit job' : 'New job'}
-      subtitle={existing ? undefined : 'Keep your work organized and track what is owed.'}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={save}>
-            {existing ? 'Save changes' : 'Create job'}
-          </Button>
-        </>
-      }
-    >
-      {err && <ErrorBanner>{err}</ErrorBanner>}
-      <div className="stack gap-4 mt-2">
-        <Field label="Job title" required error={errors.title}>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Bespoke wedding gown" autoFocus invalid={!!errors.title} />
-        </Field>
-        <Field label="Customer">
-          <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-            <option value="">No customer</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Description">
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this job involve?" />
-        </Field>
-        <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
-          <Field label="Amount" required error={errors.amount}>
-            <AmountInput value={amount} onChange={setAmount} currency={biz.currency} invalid={!!errors.amount} />
-          </Field>
-          <Field label="Due date">
-            <Input type="date" value={due || ''} onChange={(e) => setDue(e.target.value)} />
-          </Field>
-        </div>
-        <Field label="Status">
-          <Select value={status} onChange={(e) => setStatus(e.target.value as JobStatus)}>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </Select>
-        </Field>
-        <Field label="Notes">
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-        </Field>
-      </div>
-    </Modal>
-  )
-}
-
-/* ============================================================
    TRANSACTION (income / expense / drawings)
    ============================================================ */
 export function TransactionForm({
@@ -806,11 +713,12 @@ export function PaymentComposer({ params, onClose, onDone }: { params: ComposerP
   const toast = useToast()
   const customers = db.customers.filter((c) => c.business_id === biz.id && c.status === 'active')
   const [customerId, setCustomerId] = useState(params.customer_id || '')
-  const [target, setTarget] = useState(params.sale_id ? `sale:${params.sale_id}` : params.job_id ? `job:${params.job_id}` : params.invoice_id ? `invoice:${params.invoice_id}` : '')
+  const [target, setTarget] = useState(params.sale_id ? `sale:${params.sale_id}` : params.invoice_id ? `invoice:${params.invoice_id}` : '')
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('transfer')
   const [date, setDate] = useState(todayISODate())
   const [notes, setNotes] = useState('')
+  const [reference, setReference] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [err, setErr] = useState('')
 
@@ -820,10 +728,6 @@ export function PaymentComposer({ params, onClose, onDone }: { params: ComposerP
       for (const s of db.sales.filter((x) => x.business_id === biz.id && x.customer_id === customerId && x.status !== 'cancelled')) {
         const b = saleBalance(db, s)
         if (b > 0) out.push({ key: `sale:${s.id}`, label: `${s.sale_number} · Sale`, balance: b })
-      }
-      for (const j of db.jobs.filter((x) => x.business_id === biz.id && x.customer_id === customerId && x.status !== 'cancelled')) {
-        const b = jobBalance(db, j)
-        if (b > 0) out.push({ key: `job:${j.id}`, label: `${j.title} · Job`, balance: b })
       }
       for (const i of db.invoices.filter((x) => x.business_id === biz.id && x.customer_id === customerId && x.status !== 'cancelled' && x.status !== 'draft')) {
         const b = invoiceBalance(db, i)
@@ -843,16 +747,17 @@ export function PaymentComposer({ params, onClose, onDone }: { params: ComposerP
       setErrors({ amount: 'Enter an amount.' })
       return
     }
-    let t: { type: 'sale' | 'job' | 'invoice'; id: string } | null = null
+    let t: { type: 'sale' | 'invoice'; id: string } | null = null
     if (target) {
       const [type, id] = target.split(':')
-      t = { type: type as any, id }
+      t = { type: type as 'sale' | 'invoice', id }
     }
     const res = store.recordPayment({
       customer_id: customerId || null,
       target: t,
       amount: amountMinor,
       method,
+      reference,
       payment_date: date,
       notes,
     })
@@ -936,6 +841,11 @@ export function PaymentComposer({ params, onClose, onDone }: { params: ComposerP
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         </div>
+        {method === 'transfer' && (
+          <Field label="Transfer reference" hint="Bank reference, transaction ID or note for reconciliation.">
+            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. TRF-2024-00123" />
+          </Field>
+        )}
         <Field label="Notes">
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
         </Field>
@@ -1285,7 +1195,6 @@ export function GoalForm({ params, onClose, onDone }: { params: ComposerParams; 
         <Field label="Goal type">
           <Select value={type} onChange={(e) => setType(e.target.value as GoalType)}>
             <option value="revenue">Revenue received</option>
-            <option value="jobs">Jobs completed</option>
             <option value="sales">Sales recorded</option>
             <option value="customers">New customers</option>
           </Select>
@@ -1317,47 +1226,94 @@ export function GoalForm({ params, onClose, onDone }: { params: ComposerParams; 
    BUSINESS
    ============================================================ */
 export function BusinessForm({ params, onClose, onDone }: { params: ComposerParams; onClose: () => void; onDone: (result?: any) => void }) {
-  const biz = store.activeBusiness()!
+  const db = useDB()
   const toast = useToast()
-  const [name, setName] = useState(biz.name)
-  const [description, setDescription] = useState(biz.description)
-  const [currency, setCurrency] = useState(biz.currency)
-  const [country, setCountry] = useState(biz.country)
-  const [timezone, setTimezone] = useState(biz.timezone)
+  const existing = params.id ? db.businesses.find((b) => b.id === params.id) || null : null
+  const isCreate = !existing
+  const biz = existing || store.activeBusiness()
+
+  const [name, setName] = useState(biz?.name || '')
+  const [category, setCategory] = useState(biz?.category || '')
+  const [description, setDescription] = useState(biz?.description || '')
+  const [phone, setPhone] = useState(biz?.phone || '')
+  const [logoUrl, setLogoUrl] = useState(biz?.logo_url || '')
+  const [currency, setCurrency] = useState(biz?.currency || 'NGN')
+  const [country, setCountry] = useState(biz?.country || 'Nigeria')
+  const [timezone, setTimezone] = useState(biz?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos')
   const [err, setErr] = useState('')
+  const [needsUpgrade, setNeedsUpgrade] = useState(false)
 
   const save = () => {
     setErr('')
-    const res = store.updateBusiness(biz.id, { name, description, currency, country, timezone })
-    if (!res.ok) return setErr(res.error || '')
-    toast.push('Business updated')
-    onDone(res.data)
+    setNeedsUpgrade(false)
+    if (!name.trim() || name.trim().length < 2) return setErr('Please name your business.')
+    if (isCreate) {
+      const res = store.createBusiness({ name, category, description, phone, logo_url: logoUrl || null, currency, country, timezone })
+      if (!res.ok) {
+        const msg = res.error || ''
+        if (/multiple businesses|upgrade/i.test(msg)) setNeedsUpgrade(true)
+        return setErr(msg)
+      }
+      toast.push('Business created')
+      onDone(res.data)
+    } else {
+      const res = store.updateBusiness(biz!.id, { name, category, description, phone, logo_url: logoUrl || null, currency, country, timezone })
+      if (!res.ok) return setErr(res.error || '')
+      toast.push('Business updated')
+      onDone(res.data)
+    }
   }
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="Business settings"
-      subtitle="Currency and timezone apply across KUDII."
+      title={isCreate ? 'Add business' : 'Business settings'}
+      subtitle={isCreate ? 'Create a separate workspace with its own products, customers and money.' : 'These details appear on your invoices and receipts.'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" onClick={save}>
-            Save
+            {isCreate ? 'Create business' : 'Save changes'}
           </Button>
         </>
       }
     >
       {err && <ErrorBanner>{err}</ErrorBanner>}
+      {needsUpgrade && (
+        <div className="row-between mt-3" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <span className="text-sm muted">Unlock more workspaces on a paid plan.</span>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ArrowUpRight}
+            onClick={() => {
+              onClose()
+              navigate('/settings?tab=plan')
+            }}
+          >
+            See plans
+          </Button>
+        </div>
+      )}
       <div className="stack gap-4 mt-2">
         <Field label="Business name" required>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kudii Foods" autoFocus />
         </Field>
-        <Field label="Description">
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Field label="Category" hint="Helps KUDII tailor your workspace.">
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Choose a category</option>
+            {BUSINESS_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Phone / contact">
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
         </Field>
         <div className="grid grid-form" style={{ gap: 'var(--s-4)' }}>
           <Field label="Currency">
@@ -1373,6 +1329,12 @@ export function BusinessForm({ params, onClose, onDone }: { params: ComposerPara
             <Input value={country} onChange={(e) => setCountry(e.target.value)} />
           </Field>
         </div>
+        <Field label="Logo URL" hint="Optional. Paste a link to your logo.">
+          <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
+        </Field>
+        <Field label="Description">
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional. A short line about your business." />
+        </Field>
         <Field label="Timezone">
           <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Africa/Lagos" />
         </Field>
