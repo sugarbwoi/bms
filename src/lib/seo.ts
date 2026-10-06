@@ -28,7 +28,7 @@ export const PUBLIC_META: Record<string, { title: string; description: string }>
   '/pricing': {
     title: 'KUDII pricing — Free, Go and Plus plans',
     description:
-      'KUDII Free is ₦0/month, Go is ₦5,000/month and Plus is ₦10,000/month. Compare product and business limits, then upgrade only when you need to.',
+      'KUDII Free is ₦0/month, Go is ₦5,000/month and Plus is ₦20,000/month. Compare product and business limits, then upgrade only when you need to.',
   },
   '/security': {
     title: 'KUDII security — how your business data is protected',

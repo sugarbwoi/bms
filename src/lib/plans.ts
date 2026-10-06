@@ -3,9 +3,9 @@
    Single source of truth for pricing and limits.
    Never hardcode plan limits anywhere else — read them from here.
 
-   KUDII FREE  — ₦0 / month      — 5 products  — 1 business
-   KUDII GO    — ₦5,000 / month  — 20 products — 2 businesses
-   KUDII PLUS  — ₦10,000 / month — 50 products — 5 businesses
+   KUDII FREE  — ₦0 / month      — 5 products   — 1 business
+   KUDII GO    — ₦5,000 / month  — 50 products  — 2 businesses
+   KUDII PLUS  — ₦20,000 / month — 100 products — 5 businesses
    ============================================================ */
 
 import type { Minor, PlanId } from './types'
@@ -48,6 +48,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Money: money in, money out & net',
       'Receipts & activity',
       'Basic overview & progress',
+      'KUDIIBot insights',
       'Light & Dark themes',
       '1 business workspace',
     ],
@@ -59,18 +60,19 @@ export const PLANS: Record<PlanId, Plan> = {
     priceMinor: 500000, // ₦5,000
     currency: 'NGN',
     limits: {
-      products: 20,
+      products: 50,
       customers: null,
       transactions_per_month: null,
       businesses: 2,
     },
     features: [
-      'Up to 20 products',
+      'Up to 50 products',
       'Unlimited customers',
       'Unlimited sales & transactions',
       'Money: money in, money out & net',
       'Receipts & activity',
       'Overview, progress & reports',
+      'KUDIIBot insights',
       'Light & Dark themes',
       'Up to 2 business workspaces',
     ],
@@ -79,21 +81,22 @@ export const PLANS: Record<PlanId, Plan> = {
     id: 'plus',
     name: 'KUDII Plus',
     tagline: 'Run KUDII at full capacity.',
-    priceMinor: 1000000, // ₦10,000
+    priceMinor: 2000000, // ₦20,000
     currency: 'NGN',
     limits: {
-      products: 50,
+      products: 100,
       customers: null,
       transactions_per_month: null,
       businesses: 5,
     },
     features: [
-      'Up to 50 products',
+      'Up to 100 products',
       'Unlimited customers',
       'Unlimited sales & transactions',
       'Money: money in, money out & net',
       'Receipts & activity',
       'Advanced progress, reports & insights',
+      'KUDIIBot insights',
       'Light & Dark themes',
       'Up to 5 business workspaces',
     ],
@@ -144,7 +147,7 @@ export function entitlementsFor(plan: PlanId): Entitlements {
     reports: paid,
     allThemes: true,
     multiBusiness: paid,
-    aiAssistant: false, // AI Assistant is Coming Soon only — never active
+    aiAssistant: true, // KUDIIBot intelligence layer — proactive insights are computed on-device, so it is available on every plan.
   }
 }
 

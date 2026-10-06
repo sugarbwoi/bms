@@ -784,10 +784,10 @@ function FAQ() {
     { q: 'Can I handle part payments?', a: 'Yes. KUDII supports unpaid, partially paid, fully paid and even overpaid. Balances are computed for every sale, invoice and customer.' },
     { q: 'What if I make a mistake?', a: 'You can refund a payment or reverse a transaction. KUDII never deletes financial history — it records a new, auditable entry so the story stays complete.' },
     { q: 'Does it work on my phone?', a: 'Yes. KUDII is mobile-first, with a floating action button so you can record a sale, a payment or an expense in seconds.' },
-    { q: 'What are the plans?', a: 'KUDII Go is ₦5,000 per month with generous limits (50 products, 50 customers, 25 transactions, 100 transactions a month, 1 business). KUDII Plus removes every limit.' },
-    { q: 'Can I run more than one business?', a: 'KUDII Go includes one business workspace. KUDII Plus lets you run several under one account.' },
+    { q: 'What are the plans?', a: 'KUDII Free is ₦0. KUDII Go is ₦5,000 per month and lifts you to 50 products and 2 business workspaces. KUDII Plus is ₦20,000 per month with 100 products and up to 5 businesses. Nothing you record is ever lost if you change plan.' },
+    { q: 'Can I run more than one business?', a: 'KUDII Go includes up to 2 business workspaces. KUDII Plus lets you run up to 5 under one account, each kept fully separate.' },
     { q: 'Is my data safe?', a: 'Your data is isolated per business, scoped server-side, and never sold. You can export your data and request deletion at any time.' },
-    { q: 'Is there an AI assistant?', a: 'An AI Assistant is planned and shown as “Coming Soon”. It is not active yet — KUDII does not pretend otherwise.' },
+    { q: 'Is there an AI assistant?', a: 'Yes — KUDIIBot. It is not a generic chatbot. It reads your real money, customers and stock, tells you what needs attention, and files what you tell it in the right place. Every insight is tagged so you always know what is a fact, a calculation, or a suggestion.' },
   ]
   return (
     <section className="section">
