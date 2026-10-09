@@ -11,6 +11,7 @@ import {
   Package,
   Activity as ActivityIcon,
   TrendingUp,
+  BarChart3,
   ArrowLeftRight,
   Plus,
   ChevronDown,
@@ -49,6 +50,7 @@ export const SECONDARY_NAV = [
   { to: '/invoices', label: 'Invoices', icon: FileText },
   { to: '/activity', label: 'Activity', icon: ActivityIcon },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
 ]
 
 function isActive(path: string, to: string): boolean {

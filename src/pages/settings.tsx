@@ -30,6 +30,7 @@ import { useDB, useUser, useSettings, useToast, useConfirm } from '../lib/hooks'
 import { store } from '../lib/store'
 import { navigate, useRoute } from '../lib/router'
 import { useComposer } from '../components/composer-context'
+import { useKudiiBot } from '../components/kudiibot/KudiiBotProvider'
 import { PageHead } from '../components/shell'
 import {
   Button,
@@ -86,6 +87,7 @@ export default function Settings() {
   const toast = useToast()
   const confirm = useConfirm()
   const composer = useComposer()
+  const { openBot } = useKudiiBot()
   const route = useRoute()
 
   const biz = store.activeBusiness()
@@ -425,20 +427,22 @@ export default function Settings() {
               )}
             </SectionCard>
 
-            {/* AI Assistant */}
-            <SectionCard title="AI Assistant">
+            {/* KUDIIBot */}
+            <SectionCard title="KUDIIBot">
               <div className="row gap-3" style={{ alignItems: 'flex-start' }}>
-                <span className="tl-ic" style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                <span className="tl-ic" style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--gold-soft)', color: 'var(--gold)' }}>
                   <Sparkles size={18} />
                 </span>
                 <div>
                   <div className="row gap-2" style={{ alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600 }}>KUDII Assistant</span>
-                    <Badge tone="info">Coming soon</Badge>
+                    <span style={{ fontWeight: 600 }}>Your business, read for you</span>
                   </div>
                   <p className="text-xs muted mt-1">
-                    Ask questions about your business in plain language. Not available yet — we'll only ship it when it's genuinely useful.
+                    KUDIIBot watches your money, customers and stock, and tells you what needs attention — who owes you, what is leaking profit, what to do today. Tell it what happened in plain language and it files it in the right place.
                   </p>
+                  <Button variant="soft" size="sm" className="mt-3" icon={Sparkles} onClick={() => openBot()}>
+                    Open KUDIIBot
+                  </Button>
                 </div>
               </div>
             </SectionCard>

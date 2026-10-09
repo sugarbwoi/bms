@@ -72,6 +72,13 @@
   --danger-soft: rgba(138, 74, 66, 0.12);
   --warning-soft: rgba(138, 106, 52, 0.13);
   --info-soft: rgba(76, 90, 102, 0.12);
+
+  /* ---- Restrained gold accent ----
+     Reserved for KUDIIBot and "attention" signals only.
+     Never used as a surface or bulk colour — a whisper, not a shout. */
+  --gold: #9a7b2e;
+  --gold-soft: rgba(154, 123, 46, 0.12);
+  --gold-line: rgba(154, 123, 46, 0.34);
 }
 
 /* ============================================================

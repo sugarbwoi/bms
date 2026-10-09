@@ -249,11 +249,11 @@ export default function Progress() {
 
           <SectionCard title="Reports">
             <div className="stack gap-2">
-              <Button variant="soft" block icon={BarChart3} onClick={() => navigate('/money')}>
-                Money in & out
+              <Button variant="primary" block icon={BarChart3} onClick={() => navigate('/reports')}>
+                Automated reports
               </Button>
               <Button variant="soft" block icon={CircleDollarSign} onClick={() => navigate('/money')}>
-                Outstanding balances
+                Money in & out
               </Button>
               <Button variant="ghost" block icon={TrendingUp} onClick={() => navigate('/sales')}>
                 Sales history
@@ -270,6 +270,7 @@ export default function Progress() {
 function GoalRow({ goal, currency }: { goal: Goal; currency: string }) {
   const db = useDB()
   const toast = useToast()
+  const composer = useComposer()
   const p = goalProgress(db, goal)
   const isRevenue = goal.type === 'revenue'
   const done = p.pct >= 100
@@ -298,8 +299,8 @@ function GoalRow({ goal, currency }: { goal: Goal; currency: string }) {
         <Menu align="right" trigger={({ toggle }) => <IconButton icon={MoreVertical} label="Goal options" variant="ghost" size="sm" onClick={toggle} />}>
           {(close) => (
             <>
-              <MenuItem icon={Pencil} onClick={() => { close() }}>
-                Edit (coming soon)
+              <MenuItem icon={Pencil} onClick={() => { composer.open('goal', { id: goal.id }); close() }}>
+                Edit
               </MenuItem>
               {goal.status !== 'completed' && (
                 <MenuItem icon={Check} onClick={() => { complete(); close() }}>

@@ -249,8 +249,24 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [err, setErr] = useState('')
   const [needsUpgrade, setNeedsUpgrade] = useState(false)
+  const [added, setAdded] = useState(0)
+  const [formKey, setFormKey] = useState(0)
 
-  const save = () => {
+  // Clear the form in place so the workspace stays open for the next product.
+  const resetForNext = () => {
+    setName('')
+    setDescription('')
+    setSelling('')
+    setCost('')
+    setOpening('')
+    setLow('5')
+    setErrors({})
+    setErr('')
+    setNeedsUpgrade(false)
+    setFormKey((k) => k + 1)
+  }
+
+  const save = (keepOpen = false) => {
     setErrors({})
     setErr('')
     setNeedsUpgrade(false)
@@ -271,22 +287,28 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
       }
       toast.push('Product updated')
       onDone(res.data)
+      return
+    }
+    const res = store.createProduct({
+      name,
+      description,
+      selling_price: sellingMinor || 0,
+      cost_price: costMinor,
+      low_stock_threshold: Number(low) || 0,
+      stock_quantity: Number(opening) || 0,
+    })
+    if (!res.ok) {
+      setErrors(res.fieldErrors || {})
+      const msg = res.error || ''
+      if (/limit|upgrade/i.test(msg)) setNeedsUpgrade(true)
+      setErr(msg)
+      return
+    }
+    if (keepOpen) {
+      setAdded((n) => n + 1)
+      toast.push('Product added — ready for the next one')
+      resetForNext()
     } else {
-      const res = store.createProduct({
-        name,
-        description,
-        selling_price: sellingMinor || 0,
-        cost_price: costMinor,
-        low_stock_threshold: Number(low) || 0,
-        stock_quantity: Number(opening) || 0,
-      })
-      if (!res.ok) {
-        setErrors(res.fieldErrors || {})
-        const msg = res.error || ''
-        if (/limit|upgrade/i.test(msg)) setNeedsUpgrade(true)
-        setErr(msg)
-        return
-      }
       toast.push('Product added')
       onDone(res.data)
     }
@@ -303,13 +325,23 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={save}>
+          {!existing && (
+            <Button variant="soft" onClick={() => save(true)}>
+              Save &amp; add another
+            </Button>
+          )}
+          <Button variant="primary" onClick={() => save(false)}>
             {existing ? 'Save changes' : 'Add product'}
           </Button>
         </>
       }
     >
       {err && <ErrorBanner>{err}</ErrorBanner>}
+      {added > 0 && !err && (
+        <p className="text-sm muted mt-2" role="status">
+          {added} product{added === 1 ? '' : 's'} added this session. Keep going, or close when you're done.
+        </p>
+      )}
       {needsUpgrade && (
         <div className="row-between mt-3" style={{ gap: 12, flexWrap: 'wrap' }}>
           <span className="text-sm muted">Add more products on a bigger plan.</span>
@@ -328,7 +360,7 @@ export function ProductForm({ params, onClose, onDone }: { params: ComposerParam
       )}
       <div className="stack gap-4 mt-2">
         <Field label="Product name" required error={errors.name}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ankara Fabric (6 yards)" autoFocus invalid={!!errors.name} />
+          <Input key={formKey} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ankara Fabric (6 yards)" autoFocus invalid={!!errors.name} />
         </Field>
         <Field label="Description">
           <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description" />

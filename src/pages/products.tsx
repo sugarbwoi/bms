@@ -20,11 +20,13 @@ import {
   AlertTriangle,
   Search as SearchIcon,
   TrendingUp,
+  Upload,
 } from 'lucide-react'
 import { useDB, useConfirm, useToast, useUser } from '../lib/hooks'
 import { store } from '../lib/store'
 import { navigate } from '../lib/router'
 import { useComposer } from '../components/composer-context'
+import { BulkProductImport } from '../components/BulkProductImport'
 import { PageHead } from '../components/shell'
 import { planOf, usage } from '../lib/derive'
 import { PLANS } from '../lib/plans'
@@ -60,6 +62,7 @@ function ProductList() {
   const user = useUser()
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<'all' | 'low' | 'archived'>('all')
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const businessId = biz?.id || ''
   const currency = biz?.currency || 'NGN'
@@ -90,9 +93,14 @@ function ProductList() {
         title="Products"
         sub="What you sell, what it costs, and what's in stock."
         actions={
-          <Button variant="primary" icon={Plus} onClick={() => composer.open('product')}>
-            Add product
-          </Button>
+          <div className="row gap-2 wrap">
+            <Button variant="soft" icon={Upload} onClick={() => setBulkOpen(true)}>
+              Bulk add
+            </Button>
+            <Button variant="primary" icon={Plus} onClick={() => composer.open('product')}>
+              Add product
+            </Button>
+          </div>
         }
       />
 
@@ -168,9 +176,14 @@ function ProductList() {
             }
             action={
               !query && tab === 'all' ? (
-                <Button variant="primary" icon={Plus} onClick={() => composer.open('product')}>
-                  Add a product
-                </Button>
+                <div className="row gap-2 wrap" style={{ justifyContent: 'center' }}>
+                  <Button variant="primary" icon={Plus} onClick={() => composer.open('product')}>
+                    Add a product
+                  </Button>
+                  <Button variant="soft" icon={Upload} onClick={() => setBulkOpen(true)}>
+                    Bulk add
+                  </Button>
+                </div>
               ) : undefined
             }
           />
@@ -207,6 +220,8 @@ function ProductList() {
           </div>
         </SectionCard>
       )}
+
+      <BulkProductImport open={bulkOpen} onClose={() => setBulkOpen(false)} onDone={() => setBulkOpen(false)} />
     </div>
   )
 }

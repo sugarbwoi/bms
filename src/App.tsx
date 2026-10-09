@@ -25,6 +25,7 @@ const Money = lazy(() => import('./pages/money'))
 const Invoices = lazy(() => import('./pages/invoices'))
 const Activity = lazy(() => import('./pages/activity'))
 const Progress = lazy(() => import('./pages/progress'))
+const Reports = lazy(() => import('./pages/reports'))
 const Settings = lazy(() => import('./pages/settings'))
 
 const MARKETING_ROUTES = new Set([
@@ -153,6 +154,8 @@ function AppRoutes() {
       return <Activity />
     case 'progress':
       return <Progress />
+    case 'reports':
+      return <Reports />
     case 'settings':
       return <Settings />
     case 'onboarding':
